@@ -1,0 +1,36 @@
+[
+  {
+    "propertyId": "prop-pune-01",
+    "propertyTitle": "Spacious 3 BHK Hill-View Flat with Continuous Balcony",
+    "propertyPrice": "₹1.65 Cr",
+    "brokerId": "brk-assigned",
+    "brokerStoreCode": "sahyadri-premier",
+    "buyerName": "Rahul Sharma",
+    "buyerPhone": "9876543210",
+    "buyerEmail": "buyer@investors.in",
+    "message": "Site visit scheduled for 2026-11-05 at 02:30 PM - 04:00 PM (Afternoon Slot) via BlitzBot AI",
+    "preferredDate": "2026-11-05",
+    "timeSlot": "02:30 PM - 04:00 PM (Afternoon Slot)",
+    "source": "blitzbot",
+    "status": "confirmed",
+    "id": "lead-1793645280700",
+    "createdAt": "2026-11-02T18:48:00.700Z"
+  },
+  {
+    "propertyId": "prop-mum-01",
+    "propertyTitle": "Sea-Facing 3 BHK Luxury Haven with Private Sun Deck",
+    "propertyPrice": "₹6.85 Cr",
+    "brokerId": "brk-assigned",
+    "brokerStoreCode": "apex-prime-realty",
+    "buyerName": "Rahul Sharma",
+    "buyerPhone": "9876543210",
+    "buyerEmail": "buyer@investors.in",
+    "message": "Site visit scheduled for Tomorrow 3:30 PM via BlitzBot AI",
+    "preferredDate": "2026-11-03",
+    "timeSlot": "Tomorrow 3:30 PM",
+    "source": "blitzbot",
+    "status": "confirmed",
+    "id": "lead-1793644053531",
+    "createdAt": "2026-11-02T18:27:33.531Z"
+  }
+]

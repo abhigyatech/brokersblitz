@@ -1,0 +1,21 @@
+{
+  "name": "BrokersBlitz",
+  "short_name": "BrokersBlitz",
+  "description": "Turn Listings Into Closings - Real Estate Broker Network",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F0EA",
+  "theme_color": "#DF6400",
+  "icons": [
+    {
+      "src": "/light-logo.svg",
+      "sizes": "331x99",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
