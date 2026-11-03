@@ -271,9 +271,10 @@ export default function HeroSearch({
 
                   <button
                     type="submit"
-                    className="px-4 sm:px-6 py-2 rounded-full bg-[#DF6400] hover:bg-[#C75700] text-white text-xs sm:text-sm font-black shadow-md shadow-[#DF6400]/30 transition-all flex items-center gap-1.5 flex-shrink-0 group"
+                    className="p-2 sm:px-6 sm:py-2 rounded-full bg-[#DF6400] hover:bg-[#C75700] text-white text-xs sm:text-sm font-black shadow-md shadow-[#DF6400]/30 transition-all flex items-center justify-center gap-1.5 flex-shrink-0 group"
                   >
-                    <span>Search</span>
+                    <Search className="w-4 h-4 sm:hidden transition-transform group-hover:scale-110" />
+                    <span className="hidden sm:inline">Search</span>
                     <ArrowRight className="w-3.5 h-3.5 hidden sm:inline-block transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
