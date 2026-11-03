@@ -182,7 +182,7 @@ export default function SearchAutocompleteDropdown({
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-[#1E1B17] border border-[#1A1A1A]/15 dark:border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-left max-h-[480px] sm:max-h-[520px] overflow-y-auto no-scrollbar font-sans"
+      className="absolute top-full left-0 right-0 mt-2 z-30 bg-white dark:bg-[#1E1B17] border border-[#1A1A1A]/15 dark:border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-left max-h-[480px] sm:max-h-[520px] overflow-y-auto no-scrollbar font-sans"
     >
       {loading && !hasResults && (
         <div className="p-4 sm:p-5 space-y-3">

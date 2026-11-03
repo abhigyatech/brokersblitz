@@ -339,13 +339,14 @@ export default function HomePage() {
             {filteredProperties.length > 0 ? (
               <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar pb-3 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3.5">
                 {filteredProperties.map((prop) => (
-                  <PropertyCard
-                    key={prop.id}
-                    property={prop}
-                    isSaved={savedPropertyIds.includes(prop.id)}
-                    onShare={(p) => setSharingProperty(p)}
-                    onToggleSave={handleToggleSave}
-                  />
+                  <div key={prop.id} className="w-[280px] xs:w-[300px] sm:w-auto flex-shrink-0 snap-start">
+                    <PropertyCard
+                      property={prop}
+                      isSaved={savedPropertyIds.includes(prop.id)}
+                      onShare={(p) => setSharingProperty(p)}
+                      onToggleSave={handleToggleSave}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -371,36 +372,39 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-12 bg-white dark:bg-[#151311] border-b border-[#1A1A1A]/5 dark:border-white/5">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#DF6400]/10 text-[#DF6400] text-[10px] font-black uppercase tracking-wider">
+        <section className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-10 sm:py-12 bg-white dark:bg-[#151311] border-b border-[#1A1A1A]/5 dark:border-white/5">
+          <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-md bg-[#DF6400]/10 text-[#DF6400] text-[10px] font-black uppercase tracking-wider">
                 <Store className="w-3.5 h-3.5" />
                 <span>Verified Partners</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#1A1A1A] dark:text-white tracking-tight mt-2.5">
-                Verified Broker Stores By Location
+              <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-black text-[#1A1A1A] dark:text-white tracking-tight mt-1.5 sm:mt-2.5 truncate">
+                <span className="sm:hidden">Verified Broker Stores</span>
+                <span className="hidden sm:inline">Verified Broker Stores By Location</span>
               </h2>
-              <p className="text-xs sm:text-sm text-[#5C5852] dark:text-[#A8A29A] mt-1.5 font-medium">
-                Connect directly with certified real estate advisors across Indian metros.
+              <p className="text-xs sm:text-sm text-[#5C5852] dark:text-[#A8A29A] mt-0.5 sm:mt-1 font-medium truncate">
+                <span className="sm:hidden">Connect with certified advisors.</span>
+                <span className="hidden sm:inline">Connect directly with certified real estate advisors across Indian metros.</span>
               </p>
             </div>
 
             <Link
               href="/brokers"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#DF6400] text-white text-xs font-bold hover:bg-[#C75700] shadow-sm transition-all self-start md:self-auto"
+              className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[#DF6400] text-white text-xs font-bold hover:bg-[#C75700] shadow-sm transition-all flex-shrink-0"
             >
-              <span>Explore All Broker Stores</span>
+              <span className="sm:hidden">All Stores</span>
+              <span className="hidden sm:inline">Explore All Broker Stores</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar pb-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
             {brokerStores.slice(0, 4).map((b) => (
               <Link
                 key={b.storeCode}
                 href={`/broker/${b.storeCode}`}
-                className="group p-4 rounded-2xl bg-[#F4F0EA]/60 dark:bg-[#1E1B17] border border-[#1A1A1A]/10 dark:border-white/10 hover:border-[#DF6400] hover:shadow-md transition-all flex flex-col justify-between"
+                className="w-[270px] xs:w-[290px] sm:w-auto flex-shrink-0 snap-start group p-4 rounded-2xl bg-[#F4F0EA]/60 dark:bg-[#1E1B17] border border-[#1A1A1A]/10 dark:border-white/10 hover:border-[#DF6400] hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -53,6 +53,17 @@ export default function Navbar({
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const [cityQuery, setCityQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handlePostPropertyClick = () => {
     setIsMobileMenuOpen(false);
@@ -262,13 +273,13 @@ export default function Navbar({
       </header>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex justify-end">
+        <div className="fixed inset-0 z-[100] md:hidden flex justify-end">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 z-[95]"
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          <div className="relative w-[300px] sm:w-[340px] bg-white dark:bg-[#1A1815] h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto z-10 animate-in slide-in-from-right duration-200 text-[#1A1A1A] dark:text-white">
+          <div className="relative w-[300px] sm:w-[340px] bg-white dark:bg-[#1A1815] h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto z-[100] animate-in slide-in-from-right duration-200 text-[#1A1A1A] dark:text-white">
             <div className="space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-[#1A1A1A]/10 dark:border-white/10">
                 <Link
