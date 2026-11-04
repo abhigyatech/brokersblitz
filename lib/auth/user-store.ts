@@ -318,6 +318,43 @@ export function deleteSession(token: string) {
   } catch {}
 }
 
+export function deleteAllUserSessions(userId: string) {
+  ensureDataFiles();
+  try {
+    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
+    const sessions: ActiveSession[] = JSON.parse(raw);
+    const filtered = sessions.filter((s) => s.userId !== userId);
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+  } catch {}
+}
+
+export function eraseUserPersonalData(userId: string): { success: boolean; error?: string } {
+  const users = getAllUsers();
+  const user = users.find((u) => u.id === userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+  if (user.role === 'admin') {
+    return { success: false, error: 'Primary administrator accounts cannot be erased directly.' };
+  }
+
+  user.fullName = 'Deleted User [DPDP Erased]';
+  user.email = `erased.${userId}@anonymized.brokersblitz.in`;
+  user.phone = '0000000000';
+  user.passwordHash = 'ERASED';
+  user.passwordSalt = 'ERASED';
+  user.agencyName = undefined;
+  user.reraNumber = undefined;
+  user.isLocked = true;
+  user.dpdpConsent = false;
+  user.updatedAt = new Date().toISOString();
+
+  saveUsers(users);
+  deleteAllUserSessions(userId);
+
+  return { success: true };
+}
+
 export function getAllBrokers(): StoredUser[] {
   return getAllUsers().filter((u) => u.role === 'broker');
 }

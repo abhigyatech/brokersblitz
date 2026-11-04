@@ -1,0 +1,38 @@
+[
+  {
+    "id": "audit-1793812704803-db4b13",
+    "userIdHash": "e1414b78cad82412",
+    "action": "DATA_ERASURE",
+    "regulation": "DPDP_ACT_2023_INDIA",
+    "status": "COMPLETED",
+    "timestamp": "2026-11-04T17:18:24.803Z",
+    "details": "Personal data erased in accordance with Section 12 of the DPDP Act 2023 and GDPR Article 17"
+  },
+  {
+    "id": "audit-1793812704802-853302",
+    "userIdHash": "e1414b78cad82412",
+    "action": "DATA_EXPORT",
+    "regulation": "DPDP_ACT_2023_INDIA",
+    "status": "COMPLETED",
+    "timestamp": "2026-11-04T17:18:24.802Z",
+    "details": "Data Principal downloaded full personal data archive"
+  },
+  {
+    "id": "audit-1793812680619-2f9018",
+    "userIdHash": "fb7b422573a18aa0",
+    "action": "DATA_ERASURE",
+    "regulation": "DPDP_ACT_2023_INDIA",
+    "status": "COMPLETED",
+    "timestamp": "2026-11-04T17:18:00.619Z",
+    "details": "Personal data erased in accordance with Section 12 of the DPDP Act 2023 and GDPR Article 17"
+  },
+  {
+    "id": "audit-1793812680618-d1886a",
+    "userIdHash": "fb7b422573a18aa0",
+    "action": "DATA_EXPORT",
+    "regulation": "DPDP_ACT_2023_INDIA",
+    "status": "COMPLETED",
+    "timestamp": "2026-11-04T17:18:00.618Z",
+    "details": "Data Principal downloaded full personal data archive"
+  }
+]

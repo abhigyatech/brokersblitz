@@ -37,6 +37,10 @@ export function getOrCreateSession(phone: string, userName?: string): WhatsAppUs
   const sessions = readSessions();
 
   if (sessions[cleanPhone]) {
+    const lastActiveTime = sessions[cleanPhone].lastActive ? new Date(sessions[cleanPhone].lastActive).getTime() : 0;
+    if (Date.now() - lastActiveTime > 2 * 60 * 60 * 1000) {
+      sessions[cleanPhone].currentStep = 'idle';
+    }
     sessions[cleanPhone].lastActive = new Date().toISOString();
     writeSessions(sessions);
     return sessions[cleanPhone];

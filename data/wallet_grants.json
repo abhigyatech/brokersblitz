@@ -115,5 +115,70 @@
     "status": "exhausted",
     "createdAt": "2026-11-04T13:51:07.079Z",
     "updatedAt": "2026-11-04T13:51:07.085Z"
+  },
+  {
+    "id": "grt-611dc58dfa7b0594",
+    "brokerId": "broker-indore-01",
+    "initialAmount": 50,
+    "remainingAmount": 50,
+    "expiresAt": "2026-12-04T17:18:07.388Z",
+    "reason": "Referral Bonus: Referred Test Referred Buyer",
+    "grantedBy": "system-referral",
+    "grantedByName": "BrokersBlitz Referral Engine",
+    "status": "active",
+    "createdAt": "2026-11-04T17:18:07.388Z",
+    "updatedAt": "2026-11-04T17:18:07.388Z"
+  },
+  {
+    "id": "grt-8e24a802af7ec9a6",
+    "brokerId": "user-1793812687386-ysr9ej",
+    "initialAmount": 50,
+    "remainingAmount": 50,
+    "expiresAt": "2026-12-04T17:18:07.390Z",
+    "reason": "Welcome Referral Bonus: Invited by Sanjay Verma",
+    "grantedBy": "system-referral",
+    "grantedByName": "BrokersBlitz Referral Engine",
+    "status": "active",
+    "createdAt": "2026-11-04T17:18:07.390Z",
+    "updatedAt": "2026-11-04T17:18:07.390Z"
+  },
+  {
+    "id": "grt-a3dc2c0c6839a794",
+    "brokerId": "broker-indore-01",
+    "initialAmount": 50,
+    "remainingAmount": 50,
+    "expiresAt": "2026-12-04T17:18:24.023Z",
+    "reason": "Referral Bonus: Referred Test Referred Buyer",
+    "grantedBy": "system-referral",
+    "grantedByName": "BrokersBlitz Referral Engine",
+    "status": "active",
+    "createdAt": "2026-11-04T17:18:24.023Z",
+    "updatedAt": "2026-11-04T17:18:24.023Z"
+  },
+  {
+    "id": "grt-e353cc5c0e0d49bd",
+    "brokerId": "user-1793812704021-m3c7p5",
+    "initialAmount": 50,
+    "remainingAmount": 50,
+    "expiresAt": "2026-12-04T17:18:24.025Z",
+    "reason": "Welcome Referral Bonus: Invited by Sanjay Verma",
+    "grantedBy": "system-referral",
+    "grantedByName": "BrokersBlitz Referral Engine",
+    "status": "active",
+    "createdAt": "2026-11-04T17:18:24.025Z",
+    "updatedAt": "2026-11-04T17:18:24.025Z"
+  },
+  {
+    "id": "grt-45abc8476a1d4afd",
+    "brokerId": "test-broker-concurrency-1793812704188",
+    "initialAmount": 300,
+    "remainingAmount": 0,
+    "expiresAt": "2026-12-04T17:18:24.191Z",
+    "reason": "Recharge Bonus (pro)",
+    "grantedBy": "system",
+    "grantedByName": "Razorpay Recharge Engine",
+    "status": "exhausted",
+    "createdAt": "2026-11-04T17:18:24.191Z",
+    "updatedAt": "2026-11-04T17:18:24.198Z"
   }
 ]

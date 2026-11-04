@@ -99,13 +99,13 @@
     "id": "wlt-025b1ec1582f76cb",
     "brokerId": "broker-indore-01",
     "paidBalance": 0,
-    "freeBalance": 98,
-    "totalBalance": 98,
+    "freeBalance": 198,
+    "totalBalance": 198,
     "currency": "INR",
     "status": "active",
-    "version": 4,
+    "version": 6,
     "createdAt": "2026-11-04T11:16:02.435Z",
-    "updatedAt": "2026-11-04T13:51:13.904Z"
+    "updatedAt": "2026-11-04T17:59:34.306Z"
   },
   {
     "id": "wlt-9eaeb13c1295817d",
@@ -214,5 +214,65 @@
     "version": 12,
     "createdAt": "2026-11-04T13:51:07.076Z",
     "updatedAt": "2026-11-04T13:51:07.097Z"
+  },
+  {
+    "id": "wlt-8b327cd8639bb40f",
+    "brokerId": "user-1793812680612-alrgl9",
+    "paidBalance": 0,
+    "freeBalance": 0,
+    "totalBalance": 0,
+    "currency": "INR",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-11-04T17:18:00.617Z",
+    "updatedAt": "2026-11-04T17:18:00.617Z"
+  },
+  {
+    "id": "wlt-2c12bd9a1d79c619",
+    "brokerId": "user-1793812687386-ysr9ej",
+    "paidBalance": 0,
+    "freeBalance": 50,
+    "totalBalance": 50,
+    "currency": "INR",
+    "status": "active",
+    "version": 2,
+    "createdAt": "2026-11-04T17:18:07.389Z",
+    "updatedAt": "2026-11-04T17:18:07.393Z"
+  },
+  {
+    "id": "wlt-ecf9017781f39414",
+    "brokerId": "user-1793812704021-m3c7p5",
+    "paidBalance": 0,
+    "freeBalance": 50,
+    "totalBalance": 50,
+    "currency": "INR",
+    "status": "active",
+    "version": 2,
+    "createdAt": "2026-11-04T17:18:24.024Z",
+    "updatedAt": "2026-11-04T17:18:24.027Z"
+  },
+  {
+    "id": "wlt-609ae52602672743",
+    "brokerId": "test-broker-concurrency-1793812704188",
+    "paidBalance": 300,
+    "freeBalance": 0,
+    "totalBalance": 300,
+    "currency": "INR",
+    "status": "active",
+    "version": 12,
+    "createdAt": "2026-11-04T17:18:24.188Z",
+    "updatedAt": "2026-11-04T17:18:24.212Z"
+  },
+  {
+    "id": "wlt-50745507c18581c7",
+    "brokerId": "user-1793812704797-22szmo",
+    "paidBalance": 0,
+    "freeBalance": 0,
+    "totalBalance": 0,
+    "currency": "INR",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-11-04T17:18:24.801Z",
+    "updatedAt": "2026-11-04T17:18:24.801Z"
   }
 ]

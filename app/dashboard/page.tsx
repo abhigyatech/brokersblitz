@@ -36,6 +36,11 @@ import {
   Clock,
   ChevronDown,
   Gift,
+  Download,
+  UserX,
+  Lock,
+  Scale,
+  QrCode,
 } from 'lucide-react';
 import { PropertyListing, UserRole, Lead } from '../../data/types';
 import { useTheme } from '../../components/ThemeProvider';
@@ -46,6 +51,9 @@ import BrokerWalletView from '../../components/BrokerWalletView';
 import AdminWalletView from '../../components/AdminWalletView';
 import AdminReferralView from '../../components/AdminReferralView';
 import UserReferralCard from '../../components/UserReferralCard';
+import CriticalActionConfirmModal from '../../components/CriticalActionConfirmModal';
+import PrivacyComplianceView from '../../components/PrivacyComplianceView';
+import BrokerProfileCardBuilder from '../../components/BrokerProfileCardBuilder';
 
 interface BrokerItem {
   id: string;
@@ -269,7 +277,70 @@ export default function DashboardPage() {
     window.location.href = '/login';
   };
 
-  const handleToggleUserStatus = async (userId: string) => {
+  const [criticalModalConfig, setCriticalModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmPhrase: string;
+    confirmButtonText?: string;
+    dangerLevel?: 'danger' | 'warning';
+    onConfirm: () => Promise<void> | void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmPhrase: '',
+    onConfirm: () => {},
+  });
+
+  const triggerDeleteListingModal = (item: PropertyListing) => {
+    setCriticalModalConfig({
+      isOpen: true,
+      title: `Permanently Delete Listing: ${item.title}`,
+      description: `Critical Action: This property listing will be permanently removed from BrokersBlitz and all search indices. This operation is immediate and non-reversible.`,
+      confirmPhrase: 'DELETE',
+      confirmButtonText: 'Permanently Delete Listing',
+      dangerLevel: 'danger',
+      onConfirm: async () => {
+        const res = await fetch(`/api/properties/${item.id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setProperties((prev) => prev.filter((p) => p.id !== item.id));
+          showToast('Property listing permanently deleted.');
+          if (currentUser?.role === 'admin') loadData();
+        } else {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to delete property');
+        }
+      },
+    });
+  };
+
+  const triggerToggleUserModal = (userId: string, isCurrentlyLocked: boolean, targetName: string) => {
+    if (!isCurrentlyLocked) {
+      setCriticalModalConfig({
+        isOpen: true,
+        title: `Suspend Account: ${targetName}`,
+        description: `Critical Action: Suspending this account will immediately revoke login access, deactivate all active property listings, and pause WhatsApp lead inquiries for this user.`,
+        confirmPhrase: 'SUSPEND',
+        confirmButtonText: 'Confirm & Suspend Account',
+        dangerLevel: 'danger',
+        onConfirm: async () => {
+          const res = await fetch(`/api/admin/users/${userId}/lock`, { method: 'POST' });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast('Account suspended successfully.');
+            loadData();
+          } else {
+            throw new Error(data.error || 'Failed to suspend account');
+          }
+        },
+      });
+    } else {
+      executeToggleUserStatus(userId);
+    }
+  };
+
+  const executeToggleUserStatus = async (userId: string) => {
     try {
       const res = await fetch(`/api/admin/users/${userId}/lock`, { method: 'POST' });
       const data = await res.json();
@@ -281,6 +352,54 @@ export default function DashboardPage() {
       }
     } catch {
       showToast('Error updating status');
+    }
+  };
+
+  const triggerDeleteAccountModal = () => {
+    setCriticalModalConfig({
+      isOpen: true,
+      title: 'Erase Account & Personal Data (DPDP Act, 2023)',
+      description: 'Statutory Right to Erasure: In compliance with Section 12 of the DPDP Act 2023 and GDPR Article 17, your profile, contact numbers, listings, and credentials will be permanently erased. You will be signed out immediately.',
+      confirmPhrase: 'DELETE MY ACCOUNT',
+      confirmButtonText: 'Permanently Erase My Data',
+      dangerLevel: 'danger',
+      onConfirm: async () => {
+        const res = await fetch('/api/user/delete-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmPhrase: 'DELETE MY ACCOUNT' }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Account and personal data erased permanently.');
+          window.location.href = '/';
+        } else {
+          throw new Error(data.error || 'Failed to erase account.');
+        }
+      },
+    });
+  };
+
+  const handleDownloadPersonalData = async () => {
+    try {
+      showToast('Preparing your personal data archive (DPDP Act Sec 11)...');
+      const res = await fetch('/api/user/data-export');
+      if (!res.ok) {
+        showToast('Failed to export personal data.');
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `brokersblitz_privacy_export_${currentUser?.id || 'user'}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Personal data archive downloaded successfully!');
+    } catch {
+      showToast('Error downloading personal data');
     }
   };
 
@@ -301,20 +420,6 @@ export default function DashboardPage() {
       }
     } catch {
       showToast('Error updating listing status');
-    }
-  };
-
-  const handleDeleteListing = async (item: PropertyListing) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.title}"?`)) return;
-    try {
-      const res = await fetch(`/api/properties/${item.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setProperties((prev) => prev.filter((p) => p.id !== item.id));
-        showToast('Property deleted successfully.');
-        if (currentUser?.role === 'admin') loadData();
-      }
-    } catch {
-      showToast('Failed to delete property');
     }
   };
 
@@ -434,6 +539,7 @@ export default function DashboardPage() {
     { id: 'wallet', label: 'Wallet & Ledger', icon: Wallet },
     { id: 'referrals', label: 'Referral Program', icon: Gift },
     { id: 'admins', label: 'Admin Team', icon: ShieldCheck },
+    { id: 'privacy', label: 'Privacy & DPDP Rights', icon: Lock },
   ];
 
   const brokerNavItems = [
@@ -442,7 +548,9 @@ export default function DashboardPage() {
     { id: 'visits', label: 'Leads & Visits', icon: CalendarCheck },
     { id: 'wallet', label: 'Credits & Wallet', icon: Wallet },
     { id: 'referrals', label: 'Refer & Earn', icon: Gift },
+    { id: 'card', label: 'Visiting Cards & QR', icon: QrCode },
     { id: 'store', label: 'My Storefront', icon: Store },
+    { id: 'privacy', label: 'Privacy & DPDP Rights', icon: Lock },
   ];
 
   const buyerNavItems = [
@@ -450,6 +558,7 @@ export default function DashboardPage() {
     { id: 'listings', label: 'Saved Properties', icon: Heart },
     { id: 'visits', label: 'My Enquiries', icon: CalendarCheck },
     { id: 'referrals', label: 'Refer & Earn', icon: Gift },
+    { id: 'privacy', label: 'Privacy & DPDP Rights', icon: Lock },
   ];
 
   const navItems = isAdmin ? adminNavItems : isBroker ? brokerNavItems : buyerNavItems;
@@ -1016,7 +1125,7 @@ export default function DashboardPage() {
 
                               <td className="py-3 px-3 text-right">
                                 <button
-                                  onClick={() => handleToggleUserStatus(p.id)}
+                                  onClick={() => triggerToggleUserModal(p.id, p.isLocked, p.fullName)}
                                   className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all shadow-sm ${
                                     p.isLocked
                                       ? 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -1224,7 +1333,7 @@ export default function DashboardPage() {
                             </td>
                             <td className="p-3.5 text-right">
                               <button
-                                onClick={() => handleToggleUserStatus(b.id)}
+                                onClick={() => triggerToggleUserModal(b.id, b.isLocked, b.fullName)}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                   b.isLocked
                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -1322,7 +1431,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-3.5 text-right">
                           <button
-                            onClick={() => handleToggleUserStatus(u.id)}
+                            onClick={() => triggerToggleUserModal(u.id, u.isLocked, u.fullName)}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                               u.isLocked
                                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -1398,7 +1507,7 @@ export default function DashboardPage() {
                                 {p.status === 'paused' ? 'Activate' : 'Deactivate'}
                               </button>
                               <button
-                                onClick={() => handleDeleteListing(p)}
+                                onClick={() => triggerDeleteListingModal(p)}
                                 className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
                               >
                                 Remove
@@ -1756,7 +1865,7 @@ export default function DashboardPage() {
                                 </>
                               )}
                               <button
-                                onClick={() => handleDeleteListing(p)}
+                                onClick={() => triggerDeleteListingModal(p)}
                                 className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
                               >
                                 Delete
@@ -1904,8 +2013,30 @@ export default function DashboardPage() {
                 >
                   Copy Link
                 </button>
+                <button
+                  onClick={() => setActiveTab('card')}
+                  className="px-4 py-2 rounded-xl bg-[#DF6400]/10 border border-[#DF6400]/20 text-xs font-bold text-[#DF6400] hover:bg-[#DF6400]/20 flex items-center gap-1.5"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Visiting Card & QR</span>
+                </button>
               </div>
             </div>
+          )}
+
+          {isBroker && activeTab === 'card' && currentUser && (
+            <BrokerProfileCardBuilder
+              broker={{
+                id: currentUser.id,
+                fullName: currentUser.name,
+                email: currentUser.email,
+                phone: currentUser.phone,
+                agencyName: currentUser.agency || 'Independent Broker Network',
+                storeCode: brokerStoreCode,
+                reraNumber: currentUser.reraNumber,
+              }}
+              onToast={showToast}
+            />
           )}
 
           {!isAdmin && !isBroker && (
@@ -1924,6 +2055,14 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          {activeTab === 'privacy' && (
+            <PrivacyComplianceView
+              currentUser={currentUser}
+              onToast={showToast}
+              onDownloadData={handleDownloadPersonalData}
+              onTriggerErasure={triggerDeleteAccountModal}
+            />
+          )}
         </main>
       </div>
 
@@ -1936,6 +2075,17 @@ export default function DashboardPage() {
           onRequireAuth={() => router.push('/login')}
         />
       )}
+
+      <CriticalActionConfirmModal
+        isOpen={criticalModalConfig.isOpen}
+        title={criticalModalConfig.title}
+        description={criticalModalConfig.description}
+        confirmPhrase={criticalModalConfig.confirmPhrase}
+        confirmButtonText={criticalModalConfig.confirmButtonText}
+        dangerLevel={criticalModalConfig.dangerLevel}
+        onConfirm={criticalModalConfig.onConfirm}
+        onClose={() => setCriticalModalConfig((c) => ({ ...c, isOpen: false }))}
+      />
     </div>
   );
 }

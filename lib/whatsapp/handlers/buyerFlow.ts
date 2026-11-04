@@ -248,11 +248,13 @@ export async function handleBuyerInquiry(
   const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
   const rawInput = text.trim();
 
-  if (
+  const isGreetingOrReset =
     actionId === 'buyer_action_restart' ||
     actionId === 'buyer_action_search' ||
-    (actionId === '' && new RegExp('^(hi|hello|hey|start|menu|search|restart)$', 'i').test(rawInput))
-  ) {
+    new RegExp('^(hi+|hello+|hey+|namaste+|pranam+|hola+|start+|menu+|search+|restart+|reset+|help+|options?)[!.\\s]*$', 'i').test(rawInput) ||
+    new RegExp('^(good\\s+(morning|afternoon|evening))[!.\\s]*$', 'i').test(rawInput);
+
+  if (isGreetingOrReset) {
     return promptBuyerIntent(from, userName);
   }
 
@@ -411,7 +413,21 @@ export async function handleBuyerInquiry(
       minPrice = 30000;
       budgetLabel = 'Above ₹30,000/mo';
     } else if (rawInput) {
-      budgetLabel = rawInput;
+      const numMatch = rawInput.match(/(\d+(?:\.\d+)?)\s*(cr|crore|lakh|lac|k|thousand)?/i);
+      if (numMatch) {
+        let val = parseFloat(numMatch[1]);
+        const unit = (numMatch[2] || '').toLowerCase();
+        if (unit.startsWith('cr')) val *= 10000000;
+        else if (unit.startsWith('l')) val *= 100000;
+        else if (unit.startsWith('k')) val *= 1000;
+        maxPrice = Math.round(val);
+        minPrice = Math.round(val * 0.7);
+        budgetLabel = `Around ${rawInput}`;
+      } else {
+        const prefs = session.buyerPreferences || {};
+        const summary = `${prefs.bedrooms || 2} BHK ${prefs.categoryLabel || 'Flat'} in ${prefs.city || 'Indore'}`;
+        return promptBuyerBudget(from, isRent, summary);
+      }
     }
 
     updateBuyerPreferences(from, { minPrice, maxPrice, budgetLabel });
