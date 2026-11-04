@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "../components/ThemeProvider";
+import { LanguageProvider } from "../components/LanguageProvider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -145,8 +147,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col font-sans relative antialiased bg-grid-pattern selection:bg-brandOrange selection:text-white">
         <ThemeProvider>
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </ThemeProvider>
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </body>
     </html>
   );

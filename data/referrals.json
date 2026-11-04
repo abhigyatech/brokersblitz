@@ -1,0 +1,34 @@
+[
+  {
+    "id": "ref-1793800258680-2005274f",
+    "referrerId": "broker-indore-01",
+    "referrerName": "Sanjay Verma",
+    "referrerCode": "INDORE1001",
+    "refereeId": "user-1793800258674-xhulo8",
+    "refereeName": "Test Referred Buyer",
+    "refereeEmail": "referred.user.1793800258650@example.com",
+    "refereePhone": "9700258650",
+    "refereeRole": "buyer",
+    "referrerCredits": 50,
+    "refereeCredits": 50,
+    "expiryDays": 30,
+    "status": "COMPLETED",
+    "createdAt": "2026-11-04T13:50:58.680Z"
+  },
+  {
+    "id": "ref-1793800234236-6fc5cb8f",
+    "referrerId": "broker-indore-01",
+    "referrerName": "Sanjay Verma",
+    "referrerCode": "INDORE1001",
+    "refereeId": "user-1793800234231-zadtg6",
+    "refereeName": "Test Referred Buyer",
+    "refereeEmail": "referred.user.1793800234206@example.com",
+    "refereePhone": "9700234206",
+    "refereeRole": "buyer",
+    "referrerCredits": 50,
+    "refereeCredits": 50,
+    "expiryDays": 30,
+    "status": "COMPLETED",
+    "createdAt": "2026-11-04T13:50:34.236Z"
+  }
+]

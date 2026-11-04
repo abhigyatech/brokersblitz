@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Share2, Heart, MapPin, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { PropertyListing } from '../data/types';
+import { useLanguage } from './LanguageProvider';
 
 interface PropertyCardProps {
   property: PropertyListing;
@@ -21,6 +22,7 @@ export default function PropertyCard({
   onToggleSave,
   onEnquire,
 }: PropertyCardProps) {
+  const { t } = useLanguage();
   const handleEnquireClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -58,12 +60,18 @@ export default function PropertyCard({
             />
           </Link>
 
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
-            <span className="px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
-              {property.purpose === 'sale' ? 'For Sale' : 'For Rent'}
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-700/90 text-white text-[10px] font-bold shadow-sm backdrop-blur-sm" title="Declared by broker. Please verify on official state RERA portal.">
-              <span>RERA</span>
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 flex-wrap">
+            {property.status === 'sold' ? (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider backdrop-blur-sm shadow-sm">
+                Sold Out
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
+                {property.purpose === 'sale' ? t('card.forSale', 'For Sale') : t('card.forRent', 'For Rent')}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-700/90 text-white text-[10px] font-bold shadow-sm backdrop-blur-sm" title={t('card.reraTooltip', 'Declared by broker. Please verify on official state RERA portal.')}>
+              <span>{t('card.rera', 'RERA')}</span>
               <CheckCircle2 className="w-3 h-3 text-white" />
             </span>
           </div>
@@ -77,7 +85,7 @@ export default function PropertyCard({
                 onShare(property);
               }}
               className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#1A1815]/90 text-[#1A1A1A] dark:text-white hover:bg-white flex items-center justify-center shadow-sm transition-transform hover:scale-110"
-              title="Share property"
+              title={t('card.shareTitle', 'Share property')}
             >
               <Share2 className="w-3.5 h-3.5 text-[#5C5852] dark:text-[#A8A29A]" />
             </button>
@@ -90,7 +98,7 @@ export default function PropertyCard({
                 onToggleSave(property.id);
               }}
               className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#1A1815]/90 text-[#1A1A1A] dark:text-white hover:bg-white flex items-center justify-center shadow-sm transition-transform hover:scale-110"
-              title={isSaved ? 'Remove from shortlist' : 'Save to shortlist'}
+              title={isSaved ? t('card.removeTitle', 'Remove from shortlist') : t('card.saveTitle', 'Save to shortlist')}
             >
               <Heart
                 className={`w-3.5 h-3.5 transition-colors ${
@@ -123,7 +131,7 @@ export default function PropertyCard({
           </p>
 
           <div className="pt-1 flex items-center justify-between text-[11px] text-[#5C5852] dark:text-[#A8A29A] border-t border-[#1A1A1A]/5 dark:border-white/10">
-            <span>{property.carpetAreaSqft.toLocaleString('en-IN')} sq.ft</span>
+            <span>{property.carpetAreaSqft.toLocaleString('en-IN')} {t('card.sqft', 'sq.ft')}</span>
             <span>{property.formattedPricePerSqft}</span>
           </div>
         </div>
@@ -135,7 +143,7 @@ export default function PropertyCard({
             href={`/property/${property.slug}`}
             className="w-full py-2 px-2 rounded-xl bg-[#F4F0EA] dark:bg-[#181614] hover:bg-[#DF6400] hover:text-white text-[#1A1A1A] dark:text-white text-[11px] font-bold text-center transition-all border border-transparent dark:border-white/10"
           >
-            View Details
+            {t('card.viewDetails', 'View Details')}
           </Link>
 
           <button
@@ -144,7 +152,7 @@ export default function PropertyCard({
             className="w-full py-2 px-2 rounded-xl bg-[#DF6400] text-white hover:bg-[#C75700] text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
           >
             <MessageSquare className="w-3.5 h-3.5 text-white" />
-            <span>Enquire</span>
+            <span>{t('card.enquire', 'Enquire')}</span>
           </button>
         </div>
       </div>

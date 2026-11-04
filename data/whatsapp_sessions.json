@@ -1,0 +1,95 @@
+{
+  "9820144520": {
+    "phone": "9820144520",
+    "role": "broker",
+    "brokerId": "broker-mumbai-01",
+    "brokerCode": "apex-prime",
+    "brokerName": "Rajesh Mehta",
+    "agencyName": "Apex Prime Realty MMR",
+    "currentStep": "idle",
+    "lastActive": "2026-11-04T13:51:13.453Z"
+  },
+  "7272357771": {
+    "phone": "7272357771",
+    "role": "admin",
+    "userName": "Platform Operations Admin",
+    "currentStep": "idle"
+  },
+  "6261439534": {
+    "phone": "6261439534",
+    "role": "buyer",
+    "brokerName": "Ad@r$h",
+    "agencyName": "Independent Broker Network",
+    "currentStep": "buyer_step5_budget",
+    "lastActive": "2026-11-04T11:01:19.377Z",
+    "draftListing": {
+      "title": "3 BHK Flat in Thani, Maharashtra",
+      "purpose": "sale",
+      "category": "apartment",
+      "categoryLabel": "3 BHK Apartment",
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "carpetAreaSqft": 700,
+      "price": 3400000,
+      "city": "Mumbai",
+      "locality": "Thani",
+      "address": "Thani, Mumbai",
+      "floorInfo": "Middle Floor",
+      "furnishing": "unfurnished",
+      "amenities": [
+        "Lift",
+        "Covered Parking",
+        "24/7 Security"
+      ],
+      "description": "3 BHK flat available in Thani, Maharashtra with a carpet area of 700 sqft.",
+      "isNegotiable": false,
+      "urgency": "Ready for Immediate Deal",
+      "rawVoiceTranscript": "Mumbai mein ek 3 BHK flat hai, Thani, Maharashtra mein, jo ki 700 sqft mein hai. Demand hai 2 crore, 30 lakh."
+    },
+    "buyerPreferences": {
+      "purpose": "sale",
+      "lastSearchedAt": "2026-11-04T11:01:19.376Z",
+      "city": "Bhopal",
+      "category": "villa",
+      "categoryLabel": "Villa / House",
+      "bedrooms": 2
+    }
+  },
+  "8878308624": {
+    "phone": "8878308624",
+    "role": "buyer",
+    "brokerName": "Adarsh",
+    "agencyName": "Independent Broker Network",
+    "currentStep": "idle",
+    "lastActive": "2026-11-04T08:40:31.050Z"
+  },
+  "9876543210": {
+    "phone": "9876543210",
+    "role": "buyer",
+    "brokerId": "user-buyer-demo",
+    "brokerName": "Rahul Sharma",
+    "agencyName": "Independent Broker Network",
+    "currentStep": "idle",
+    "lastActive": "2026-11-04T13:51:13.863Z",
+    "buyerPreferences": {
+      "purpose": "sale",
+      "lastSearchedAt": "2026-11-04T13:51:13.862Z",
+      "city": "Indore",
+      "category": "apartment",
+      "categoryLabel": "Flat / Apartment",
+      "bedrooms": 2,
+      "maxPrice": 5000000,
+      "budgetLabel": "Under ₹50 Lakhs"
+    }
+  },
+  "9988776655": {
+    "phone": "9988776655",
+    "role": "broker",
+    "brokerId": "broker-indore-01",
+    "brokerCode": "indore1001",
+    "brokerName": "Sanjay Verma",
+    "agencyName": "Prime Advisory Indore",
+    "currentStep": "idle",
+    "lastActive": "2026-11-04T13:51:13.906Z"
+  }
+}

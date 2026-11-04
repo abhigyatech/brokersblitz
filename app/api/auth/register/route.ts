@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createNewUser, createSession } from '../../../../lib/auth/user-store';
+import { validateReferralCode, processReferralReward } from '../../../../lib/referral/referral-service';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { fullName, email, phone, role, password, agencyName, reraNumber, operatingCity, dpdpConsent } = body;
+    const { fullName, email, phone, role, password, agencyName, reraNumber, operatingCity, dpdpConsent, referralCode } = body;
 
     if (!fullName || !email || !phone || !password || !role) {
       return NextResponse.json(
@@ -34,6 +35,18 @@ export async function POST(request: Request) {
       );
     }
 
+    let validReferrerId: string | undefined;
+    if (referralCode && typeof referralCode === 'string' && referralCode.trim().length > 0) {
+      const val = validateReferralCode(referralCode.trim());
+      if (!val.valid) {
+        return NextResponse.json(
+          { error: val.error || 'Invalid referral code entered.' },
+          { status: 400 }
+        );
+      }
+      validReferrerId = val.referrer?.id;
+    }
+
     const result = createNewUser({
       fullName,
       email,
@@ -43,6 +56,7 @@ export async function POST(request: Request) {
       agencyName,
       reraNumber,
       operatingCity,
+      referredBy: validReferrerId,
       dpdpConsent: true,
     });
 
@@ -51,6 +65,11 @@ export async function POST(request: Request) {
         { error: result.error || 'Registration failed.' },
         { status: 400 }
       );
+    }
+
+    let referralResult: any = null;
+    if (referralCode && typeof referralCode === 'string' && referralCode.trim().length > 0) {
+      referralResult = await processReferralReward(result.user.id, referralCode.trim());
     }
 
     const sessionToken = createSession(result.user.id);
@@ -64,12 +83,21 @@ export async function POST(request: Request) {
       agencyName: result.user.agencyName,
       reraNumber: result.user.reraNumber,
       operatingCity: result.user.operatingCity,
+      referralCode: result.user.referralCode,
     };
 
     const response = NextResponse.json({
       success: true,
       message: 'Account registered successfully.',
       user: safeUser,
+      referral: referralResult?.success
+        ? {
+            applied: true,
+            refereeCredits: referralResult.refereeCredits,
+            referrerCredits: referralResult.referrerCredits,
+            expiryDays: referralResult.expiryDays,
+          }
+        : undefined,
     });
 
     response.cookies.set('bb_session', sessionToken, {

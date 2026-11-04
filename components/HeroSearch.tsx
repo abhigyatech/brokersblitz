@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { INDIAN_METROS, PROPERTY_TYPES, BUDGET_RANGES, BHK_OPTIONS } from '../data/cities';
 import SearchAutocompleteDropdown from './SearchAutocompleteDropdown';
+import { useLanguage } from './LanguageProvider';
 
 interface HeroSearchProps {
   selectedCity: string;
@@ -43,6 +44,7 @@ export default function HeroSearch({
   onSearch,
 }: HeroSearchProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -148,10 +150,10 @@ export default function HeroSearch({
   };
 
   const tabs = [
-    { id: 'buy', label: 'Buy', icon: Home },
-    { id: 'rent', label: 'Rent', icon: Building2 },
-    { id: 'commercial', label: 'Commercial', icon: Briefcase },
-    { id: 'plots', label: 'Plots', icon: MapPin },
+    { id: 'buy', label: t('hero.tabBuy', 'Buy'), icon: Home },
+    { id: 'rent', label: t('hero.tabRent', 'Rent'), icon: Building2 },
+    { id: 'commercial', label: t('hero.tabCommercial', 'Commercial'), icon: Briefcase },
+    { id: 'plots', label: t('hero.tabPlots', 'Plots'), icon: MapPin },
   ];
 
   return (
@@ -169,19 +171,19 @@ export default function HeroSearch({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DF6400] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#DF6400]"></span>
             </span>
-            <span className="truncate">Next-Gen Real Estate Intelligence</span>
+            <span className="truncate">{t('hero.badge', 'Next-Gen Real Estate Intelligence')}</span>
           </div>
 
           <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1A1A1A] dark:text-white uppercase leading-tight sm:leading-tight">
-            Turn Listings{' '}
+            {t('hero.titlePart1', 'Turn Listings')}{' '}
             <span className="relative inline-block text-[#DF6400]">
-              <span className="relative z-10">Into Closings</span>
+              <span className="relative z-10">{t('hero.titlePart2', 'Into Closings')}</span>
               <span className="absolute bottom-1.5 left-0 w-full h-3 bg-[#DF6400]/20 -z-0 rounded-md"></span>
             </span>
           </h1>
 
           <p className="text-[#5C5852] dark:text-[#A8A29A] text-xs sm:text-sm md:text-base max-w-xl mx-auto font-medium leading-relaxed px-2">
-            Search flats, luxury penthouses, commercial spaces, and verified broker stores with live suggestions.
+            {t('hero.subtitle', 'Search flats, luxury penthouses, commercial spaces, and verified broker stores with live suggestions.')}
           </p>
         </div>
 
@@ -222,7 +224,7 @@ export default function HeroSearch({
 
                 <input
                   type="text"
-                  placeholder="Search flats, localities, or brokers..."
+                  placeholder={t('hero.searchPlaceholder', 'Search flats, localities, or brokers...')}
                   value={searchQuery}
                   onMouseEnter={() => router.prefetch('/search')}
                   onFocus={() => {
@@ -244,7 +246,7 @@ export default function HeroSearch({
                       setIsDropdownOpen(false);
                     }}
                     className="p-1.5 text-[#5C5852] dark:text-white/60 hover:text-[#1A1A1A] dark:hover:text-white flex-shrink-0"
-                    title="Clear search"
+                    title={t('hero.clearTitle', 'Clear search')}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -261,7 +263,7 @@ export default function HeroSearch({
                     title="Filter by City, Budget, Category, or Configuration"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Filters</span>
+                    <span className="hidden sm:inline">{t('hero.filters', 'Filters')}</span>
                     {activeFiltersCount > 0 && (
                       <span className="w-4 h-4 rounded-full bg-[#DF6400] text-white text-[9px] font-black flex items-center justify-center">
                         {activeFiltersCount}
@@ -274,7 +276,7 @@ export default function HeroSearch({
                     className="p-2 sm:px-6 sm:py-2 rounded-full bg-[#DF6400] hover:bg-[#C75700] text-white text-xs sm:text-sm font-black shadow-md shadow-[#DF6400]/30 transition-all flex items-center justify-center gap-1.5 flex-shrink-0 group"
                   >
                     <Search className="w-4 h-4 sm:hidden transition-transform group-hover:scale-110" />
-                    <span className="hidden sm:inline">Search</span>
+                    <span className="hidden sm:inline">{t('hero.searchBtn', 'Search')}</span>
                     <ArrowRight className="w-3.5 h-3.5 hidden sm:inline-block transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
@@ -293,7 +295,7 @@ export default function HeroSearch({
         <div className="mt-5 md:mt-0 w-full max-w-3xl mx-auto flex flex-col items-center gap-2 relative z-10">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#5C5852] dark:text-[#A8A29A]">
             <Flame className="w-3.5 h-3.5 text-[#DF6400]" />
-            <span>Trending Searches</span>
+            <span>{t('hero.popular', 'Trending Searches')}</span>
           </div>
 
           <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap">
@@ -327,8 +329,8 @@ export default function HeroSearch({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">Instant Visits</p>
-              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">Book on-demand</p>
+              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">{t('hero.tickerSiteVisits', 'Instant Visits')}</p>
+              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">{t('hero.tickerSiteVisitsSub', 'Book on-demand')}</p>
             </div>
           </div>
 
@@ -337,8 +339,8 @@ export default function HeroSearch({
               <TrendingUp className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">AI Valuations</p>
-              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">Live price trends</p>
+              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">{t('hero.tickerValuation', 'AI Valuations')}</p>
+              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">{t('hero.tickerValuationSub', 'Live price trends')}</p>
             </div>
           </div>
 
@@ -347,8 +349,8 @@ export default function HeroSearch({
               <MessageSquareCode className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">Verified Pros</p>
-              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">Direct WhatsApp chat</p>
+              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">{t('hero.tickerConnect', 'Verified Pros')}</p>
+              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">{t('hero.tickerConnectSub', 'Direct WhatsApp chat')}</p>
             </div>
           </div>
 
@@ -357,8 +359,8 @@ export default function HeroSearch({
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">Smart Match</p>
-              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">Tailored precision</p>
+              <p className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">{t('hero.tickerVerified', 'Smart Match')}</p>
+              <p className="text-[10px] font-medium text-[#5C5852] dark:text-[#A8A29A] truncate">{t('hero.tickerVerifiedSub', 'Tailored precision')}</p>
             </div>
           </div>
         </div>
@@ -376,9 +378,9 @@ export default function HeroSearch({
                   <SlidersHorizontal className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">Search Filters</h3>
+                  <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">{t('hero.filterTitle', 'Search Filters')}</h3>
                   <span className="text-[11px] text-[#5C5852] dark:text-[#A8A29A]">
-                    {activeFiltersCount > 0 ? `${activeFiltersCount} active criteria` : 'Refine your search'}
+                    {activeFiltersCount > 0 ? `${activeFiltersCount} ${t('hero.filterActiveCriteria', 'active criteria')}` : t('hero.filterRefine', 'Refine your search')}
                   </span>
                 </div>
               </div>
@@ -394,7 +396,7 @@ export default function HeroSearch({
 
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C5852] dark:text-[#A8A29A] mb-1.5">
-                Listing Purpose
+                {t('hero.filterPurpose', 'Listing Purpose')}
               </label>
               <div className="grid grid-cols-4 gap-1.5">
                 {tabs.map((t) => (
@@ -416,7 +418,7 @@ export default function HeroSearch({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                  Operating City
+                  {t('hero.filterCity', 'Operating City')}
                 </label>
                 <div className="relative">
                   <select
@@ -436,7 +438,7 @@ export default function HeroSearch({
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                  Property Category
+                  {t('hero.filterCategory', 'Property Category')}
                 </label>
                 <div className="relative">
                   <select
@@ -457,7 +459,7 @@ export default function HeroSearch({
 
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                Budget Range
+                {t('hero.filterBudget', 'Budget Range')}
               </label>
               <div className="relative">
                 <select
@@ -477,7 +479,7 @@ export default function HeroSearch({
 
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C5852] dark:text-[#A8A29A] mb-1.5">
-                Configuration (BHK)
+                {t('hero.filterBhk', 'Configuration (BHK)')}
               </label>
               <div className="grid grid-cols-4 gap-1.5">
                 {BHK_OPTIONS.map((opt) => (
@@ -503,7 +505,7 @@ export default function HeroSearch({
                 className="px-3.5 py-2 rounded-xl text-xs font-bold text-[#5C5852] hover:text-[#1A1A1A] dark:hover:text-white flex items-center gap-1.5"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset All</span>
+                <span>{t('hero.filterReset', 'Reset All')}</span>
               </button>
 
               <button
@@ -512,7 +514,7 @@ export default function HeroSearch({
                 className="px-5 py-2 rounded-xl bg-[#DF6400] hover:bg-[#C75700] text-white text-xs font-black shadow-md flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
-                <span>Apply Filters</span>
+                <span>{t('hero.filterApply', 'Apply Filters')}</span>
               </button>
             </div>
           </div>

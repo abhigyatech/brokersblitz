@@ -9,47 +9,49 @@ import {
   ShieldCheck,
   TrendingUp,
 } from 'lucide-react';
+import { useLanguage } from './LanguageProvider';
 
 export default function AppHighlightsBanner() {
+  const { t } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const valueProps = [
     {
-      title: 'Pay-As-You-Go',
-      desc: 'No heavy lock-ins or hefty yearly fees. Recharge only when you need active leads.',
-      badge: 'Budget Friendly',
+      title: t('highlights.prop1Title', 'Pay-As-You-Go'),
+      desc: t('highlights.prop1Desc', 'No heavy lock-ins or hefty yearly fees. Recharge only when you need active leads.'),
+      badge: t('highlights.prop1Badge', 'Budget Friendly'),
       icon: <Wallet className="w-5 h-5" />,
     },
     {
-      title: 'Your Own Digital Storefront',
-      desc: 'Share a neat, branded web link of all your available properties directly on WhatsApp.',
-      badge: 'Personal Link',
+      title: t('highlights.prop2Title', 'Your Own Digital Storefront'),
+      desc: t('highlights.prop2Desc', 'Share a neat, branded web link of all your available properties directly on WhatsApp.'),
+      badge: t('highlights.prop2Badge', 'Personal Link'),
       icon: <Store className="w-5 h-5" />,
     },
     {
-      title: 'Smart Automation',
-      desc: 'Let auto-replies send brochures and schedule site visits even while you are on site visits.',
-      badge: 'Time Saver',
+      title: t('highlights.prop3Title', 'Smart Automation'),
+      desc: t('highlights.prop3Desc', 'Let auto-replies send brochures and schedule site visits even while you are on site visits.'),
+      badge: t('highlights.prop3Badge', 'Time Saver'),
       icon: <Sparkles className="w-5 h-5" />,
     },
     {
-      title: 'Zero Lead Chaos',
-      desc: 'Track every buyer inquiry, pending follow-up, and hot deal in one organized place.',
-      badge: 'Organized',
+      title: t('highlights.prop4Title', 'Zero Lead Chaos'),
+      desc: t('highlights.prop4Desc', 'Track every buyer inquiry, pending follow-up, and hot deal in one organized place.'),
+      badge: t('highlights.prop4Badge', 'Organized'),
       icon: <LayoutGrid className="w-5 h-5" />,
     },
     {
-      title: 'Direct Genuine Inquiries',
-      desc: 'Connect straight with interested buyers. No unwanted calls, middlemen, or noisy spam.',
-      badge: '100% Verified',
+      title: t('highlights.prop5Title', 'Direct Genuine Inquiries'),
+      desc: t('highlights.prop5Desc', 'Connect straight with interested buyers. No unwanted calls, middlemen, or noisy spam.'),
+      badge: t('highlights.prop5Badge', '100% Verified'),
       icon: <ShieldCheck className="w-5 h-5" />,
     },
     {
-      title: 'Faster Closures',
-      desc: 'Present fresh inventory quickly to ready buyers and close token deals without friction.',
-      badge: 'High Conversion',
+      title: t('highlights.prop6Title', 'Faster Closures'),
+      desc: t('highlights.prop6Desc', 'Present fresh inventory quickly to ready buyers and close token deals without friction.'),
+      badge: t('highlights.prop6Badge', 'High Conversion'),
       icon: <TrendingUp className="w-5 h-5" />,
     },
   ];
@@ -96,10 +98,10 @@ export default function AppHighlightsBanner() {
       <div className="w-full mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
           <span className="text-[10px] font-black uppercase tracking-wider text-[#DF6400] bg-[#DF6400]/10 px-2.5 py-1 rounded-md inline-block mb-1.5">
-            Built For Modern Brokers
+            {t('highlights.badge', 'Built For Modern Brokers')}
           </span>
           <h3 className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">
-            Close More Deals, Skip the Daily Headache
+            {t('highlights.heading', 'Why Top Real Estate Advisors Partner With BrokersBlitz')}
           </h3>
         </div>
       </div>

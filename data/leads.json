@@ -1,8 +1,22 @@
 [
   {
+    "propertyId": "prop-1793779997919",
+    "propertyTitle": "2 BHK Flat in Vijay Nagar Scheme 54",
+    "propertyPrice": "\u20b922,000",
+    "brokerId": "broker-indore-01",
+    "brokerStoreCode": "indore1001",
+    "buyerName": "Rajesh Tester",
+    "buyerPhone": "7272357771",
+    "message": "Direct site visit request from WhatsApp: \"Scheme 78 3 BHK flat\"",
+    "preferredDate": "2026-11-05",
+    "status": "new",
+    "id": "lead-1793780184868",
+    "createdAt": "2026-11-04T08:16:24.868Z"
+  },
+  {
     "propertyId": "prop-pune-01",
     "propertyTitle": "Spacious 3 BHK Hill-View Flat with Continuous Balcony",
-    "propertyPrice": "₹1.65 Cr",
+    "propertyPrice": "\u20b91.65 Cr",
     "brokerId": "brk-assigned",
     "brokerStoreCode": "sahyadri-premier",
     "buyerName": "Rahul Sharma",
@@ -19,7 +33,7 @@
   {
     "propertyId": "prop-mum-01",
     "propertyTitle": "Sea-Facing 3 BHK Luxury Haven with Private Sun Deck",
-    "propertyPrice": "₹6.85 Cr",
+    "propertyPrice": "\u20b96.85 Cr",
     "brokerId": "brk-assigned",
     "brokerStoreCode": "apex-prime-realty",
     "buyerName": "Rahul Sharma",

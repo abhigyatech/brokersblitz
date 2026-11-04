@@ -330,6 +330,10 @@ export default function ListPropertyModal({
                 </div>
               </div>
 
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] font-medium">
+                <span className="font-bold">Listing Policy: </span>First 5 properties are free for 15 days. Active listings beyond 5 or after 15 days require 2 credits/day.
+              </div>
+
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"

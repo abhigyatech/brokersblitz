@@ -1,0 +1,160 @@
+================================================================================
+BROKERSBLITZ WHATSAPP BOT - BROKER ARCHITECTURE & FLOW REFERENCE NOTES
+================================================================================
+
+1. DIRECTORY STRUCTURE EXTENSIONS
+--------------------------------------------------------------------------------
+src/app/api/whatsapp/handlers/
+├── customFlow.ts                 (Handles BROKER: <CODE> code verification & fast-track registration)
+└── defaultFlow/
+    └── list/                     (Property Listing sub-tree for brokers/sellers)
+        ├── index.ts              (Listing flow coordinator)
+        ├── step1ListingType.ts   (Sell vs Rent out)
+        ├── step2Category.ts      (Residential / Commercial)
+        ├── step3Details.ts       (BHK, Sq Ft, Carpet area)
+        ├── step4Location.ts      (City, Locality, Landmark)
+        ├── step5Price.ts         (Asking price / monthly rent)
+        └── step6Confirmation.ts  (Final review & listing publishing)
+
+================================================================================
+2. BROKER DISPATCH LOGIC & REGEX TRIGGER (customFlow.ts)
+================================================================================
+- Triggers when user sends text matching: /BROKER:\s*([A-Za-z0-9_-]+)/i
+  Example: "BROKER: INDORE1001" or "BROKER: REF99"
+
+- EXECUTION PIPELINE:
+  1. Extract Broker Code from payload.
+  2. Query DB / API to validate partner referral / agency code.
+  3. IF VALID:
+     - Update user session role to `ROLE_BROKER`.
+     - Link WhatsApp phone number to Broker Profile.
+     - Send Welcome / Verification Success card.
+     - Present Quick Action Menu: [List Property] | [View Leads] | [My Inventory]
+  4. IF INVALID:
+     - Prompt error message: "Invalid Broker Code. Please check and try again or contact support."
+
+================================================================================
+3. PROPERTY LISTING STATE MACHINE (defaultFlow/list/index.ts)
+================================================================================
+
+STEP 1: Listing Intent (step1ListingType.ts)
+---------------------------------------------
+- Prompt: "What would you like to list today?"
+- Component: 2 Quick Reply Buttons
+  * [list_intent_sell] -> "🏷️ For Sale"
+  * [list_intent_rent] -> "🔑 For Rent"
+
+STEP 2: Property Category (step2Category.ts)
+---------------------------------------------
+- Prompt: "Select property category:"
+- Component: 2 Quick Reply Buttons
+  * [list_cat_res]  -> "🏠 Residential"
+  * [list_cat_comm] -> "🏢 Commercial"
+
+STEP 3: Sub-Category & Specifications (step3Details.ts)
+-------------------------------------------------------
+- Component: Interactive List followed by dynamic quick replies / text input.
+  * Residential: Flat / House / Plot / Farmhouse
+    - Ask BHK / Plot Sq Ft / Furnishing status
+  * Commercial: Office / Shop / Land / Warehouse
+    - Ask Carpet area (Sq Ft)
+
+STEP 4: Location Details (step4Location.ts)
+-------------------------------------------
+- Component: Multi-step location capture
+  1. Interactive List -> Select City (INDORE, BHOPAL, MUMBAI, PUNE, etc.)
+  2. Free Text Request -> Enter Locality / Colony / Landmark name.
+
+STEP 5: Pricing (step5Price.ts)
+-------------------------------
+- Component: Free-Text Request
+  * For Sale: "Enter expected total selling price (e.g., 45 Lakhs or 1.2 Crore):"
+  * For Rent: "Enter monthly expected rent (e.g., 15000):"
+
+STEP 6: Listing Summary & Confirmation (step6Confirmation.ts)
+--------------------------------------------------------------
+- Generates structured Markdown receipt:
+  - Listing Code / ID
+  - Property Type & Specs
+  - Location Details
+  - Asking Price / Rent
+- Component: 2 Quick Reply Buttons
+  * [confirm_publish] -> "✅ Publish Listing"
+  * [confirm_cancel]  -> "❌ Cancel / Edit"
+
+================================================================================
+4. MOCK EXAMPLE BROKER FLOW
+================================================================================
+
+[Broker] -> Sends "BROKER: INDORE1001"
+
+[Bot] -> customFlow.ts Execution
+  "🎉 *Welcome Partner Broker!*
+   Your code *INDORE1001* has been verified.
+   
+   What would you like to do?"
+  [ Button 1: 📝 List Property (broker_action_list) ]
+  [ Button 2: 📥 View Leads (broker_action_leads) ]
+
+--------------------------------------------------------------------------------
+[Broker] -> Clicks [ 📝 List Property ]
+
+[Bot] -> STEP 1: Listing Intent
+  "What would you like to list today?"
+  [ Button 1: 🏷️ For Sale (list_intent_sell) ]
+  [ Button 2: 🔑 For Rent (list_intent_rent) ]
+
+--------------------------------------------------------------------------------
+[Broker] -> Clicks [ 🏷️ For Sale ]
+
+[Bot] -> STEP 2: Category Selection
+  "Select property category:"
+  [ Button 1: 🏠 Residential (list_cat_res) ]
+  [ Button 2: 🏢 Commercial (list_cat_comm) ]
+
+--------------------------------------------------------------------------------
+[Broker] -> Clicks [ 🏠 Residential ]
+
+[Bot] -> STEP 3: Sub-Category (Interactive List)
+  Header: "Select Sub-Category"
+  List Options:
+    - Flat / Apartment (list_sub_flat)
+    - Villa / Independent House (list_sub_villa)
+    - Plot / Land (list_sub_plot)
+
+--------------------------------------------------------------------------------
+[Broker] -> Selects [ Flat / Apartment ]
+
+[Bot] -> Configuration Specs
+  "Select BHK configuration:"
+  [ Button 1: 1 BHK ]  [ Button 2: 2 BHK ]  [ Button 3: 3 BHK ]
+
+--------------------------------------------------------------------------------
+[Broker] -> Clicks [ 3 BHK ]
+
+[Bot] -> STEP 4: Location Capture
+  1. "Select City:" -> List: Indore, Bhopal, Mumbai...
+  2. [Broker selects Indore]
+  3. "Type exact locality/colony name:"
+
+--------------------------------------------------------------------------------
+[Broker] -> Types: "Vijay Nagar, Sector 78"
+
+[Bot] -> STEP 5: Price Capture
+  "Please type the expected price in Lakhs/Crores (e.g. 75 Lakhs):"
+
+--------------------------------------------------------------------------------
+[Broker] -> Types: "78 Lakhs"
+
+[Bot] -> STEP 6: Final Review & Confirmation
+  "📌 *PROPERTY LISTING SUMMARY*
+   ──────────────────────────────
+   • *Intent:* For Sale
+   • *Type:* 3 BHK Flat
+   • *Location:* Vijay Nagar, Sector 78, Indore
+   • *Asking Price:* ₹78 Lakhs
+   ──────────────────────────────
+   Ready to broadcast to buyer network?"
+  [ Button 1: ✅ Publish (list_pub_yes) ]
+  [ Button 2: ❌ Cancel (list_pub_no) ]
+================================================================================

@@ -161,7 +161,7 @@ export function updateProperty(id: string, updates: Partial<PropertyListing>): P
   return updated;
 }
 
-export function updatePropertyStatus(id: string, status: 'active' | 'paused' | 'sold'): PropertyListing | null {
+export function updatePropertyStatus(id: string, status: 'active' | 'paused' | 'sold' | 'expired'): PropertyListing | null {
   return updateProperty(id, { status });
 }
 

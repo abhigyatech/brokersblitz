@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllProperties, createProperty, searchProperties } from '@/lib/db/properties-store';
+import { getAllProperties, createProperty, searchProperties, saveProperties } from '@/lib/db/properties-store';
 import { getSessionUser, getAllBrokers } from '@/lib/auth/user-store';
+import {
+  syncDailyListingDeductions,
+  processListingOnCreation,
+  interleaveAndPrioritizeListings,
+} from '@/lib/listings/listing-lifecycle';
 
 export async function GET(req: NextRequest) {
   try {
+    await syncDailyListingDeductions().catch(() => {});
+
     const { searchParams } = new URL(req.url);
     const city = searchParams.get('city') || undefined;
     const purpose = searchParams.get('purpose') || undefined;
@@ -56,10 +63,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const prioritized = interleaveAndPrioritizeListings(results);
+
     return NextResponse.json({
       success: true,
-      count: results.length,
-      properties: isBrokerLocked ? [] : results,
+      count: prioritized.length,
+      properties: isBrokerLocked ? [] : prioritized,
       isBrokerLocked,
       brokerProfile,
     });
@@ -102,12 +111,24 @@ export async function POST(req: NextRequest) {
     }
 
     const created = createProperty(body, user);
+    const finalized = await processListingOnCreation(created, user.id);
+
+    const allProps = getAllProperties();
+    const fIdx = allProps.findIndex((p) => p.id === finalized.id);
+    if (fIdx >= 0) {
+      allProps[fIdx] = finalized;
+      saveProperties(allProps);
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Property successfully published to directory.',
-        property: created,
+        message: finalized.isFreeListing
+          ? 'Property published successfully! Free for 15 days.'
+          : finalized.status === 'active'
+          ? 'Property published successfully with 2 daily active credits.'
+          : 'Property created. Please add wallet credits to activate daily listing visibility.',
+        property: finalized,
       },
       { status: 201 }
     );

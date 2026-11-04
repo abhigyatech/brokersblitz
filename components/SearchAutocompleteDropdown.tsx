@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Sparkles,
 } from 'lucide-react';
+import { useLanguage } from './LanguageProvider';
 
 interface SmartSearch {
   title: string;
@@ -63,6 +64,7 @@ export default function SearchAutocompleteDropdown({
   onSelectSuggestion,
 }: SearchAutocompleteDropdownProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
@@ -188,7 +190,7 @@ export default function SearchAutocompleteDropdown({
         <div className="p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-2 text-xs text-[#5C5852] dark:text-[#A8A29A]">
             <Sparkles className="w-4 h-4 text-[#DF6400] animate-pulse" />
-            <span className="font-bold">Analyzing Indian real estate listings & brokers...</span>
+            <span className="font-bold">{t('autocomplete.analyzing', 'Analyzing Indian real estate listings & brokers...')}</span>
           </div>
           <div className="space-y-2">
             <div className="h-9 bg-[#F4F0EA] dark:bg-[#25221E] rounded-xl animate-pulse"></div>
@@ -201,13 +203,13 @@ export default function SearchAutocompleteDropdown({
       {!loading && !hasResults && query.trim().length >= 2 && (
         <div className="p-5 text-center text-xs text-[#5C5852] dark:text-[#A8A29A]">
           <Building2 className="w-6 h-6 mx-auto mb-2 text-[#DF6400]" />
-          <p className="font-bold text-[#1A1A1A] dark:text-white">No exact properties found for &quot;{query}&quot;</p>
-          <p className="mt-1">Try searching by metro city, BHK, or explore all Pan India properties below.</p>
+          <p className="font-bold text-[#1A1A1A] dark:text-white">{t('autocomplete.noResults', 'No exact properties found for')} &quot;{query}&quot;</p>
+          <p className="mt-1">{t('autocomplete.noResultsSub', 'Try searching by metro city, BHK, or explore all Pan India properties below.')}</p>
           <button
             onClick={() => handleNavigate(`/search?query=${encodeURIComponent(query)}`)}
             className="mt-3 px-3.5 py-1.5 rounded-xl bg-[#DF6400] text-white font-bold text-xs hover:bg-[#C75700] transition-colors"
           >
-            Explore all listings
+            {t('autocomplete.exploreAll', 'Explore all listings')}
           </button>
         </div>
       )}
@@ -217,7 +219,7 @@ export default function SearchAutocompleteDropdown({
           {smartSearches.length > 0 && (
             <div className="p-2 sm:p-2.5">
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase font-bold text-[#5C5852] dark:text-[#A8A29A] tracking-wider">
-                Smart Suggestions
+                {t('autocomplete.smartSuggestions', 'Smart Suggestions')}
               </div>
               <div className="space-y-1">
                 {smartSearches.map((s, idx) => {
@@ -256,7 +258,7 @@ export default function SearchAutocompleteDropdown({
           {brokerStores.length > 0 && (
             <div className="p-2 sm:p-2.5">
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase font-bold text-[#5C5852] dark:text-[#A8A29A] tracking-wider flex items-center justify-between">
-                <span>Verified Broker Stores</span>
+                <span>{t('autocomplete.verifiedStores', 'Verified Broker Stores')}</span>
                 <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">RERA Registered</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1">
@@ -289,7 +291,7 @@ export default function SearchAutocompleteDropdown({
                           {b.name} • {b.city}
                         </p>
                         <span className="inline-block mt-0.5 text-[9px] font-mono font-bold text-[#DF6400]">
-                          Visit Store &rarr;
+                          {t('brokersSection.visitStore', 'Visit Store')} &rarr;
                         </span>
                       </div>
                     </button>
@@ -302,7 +304,7 @@ export default function SearchAutocompleteDropdown({
           {properties.length > 0 && (
             <div className="p-2 sm:p-2.5">
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase font-bold text-[#5C5852] dark:text-[#A8A29A] tracking-wider">
-                Matching Properties ({properties.length})
+                {t('autocomplete.directProperties', 'Matching Properties')} ({properties.length})
               </div>
               <div className="space-y-1.5 mt-1">
                 {properties.map((p, idx) => {

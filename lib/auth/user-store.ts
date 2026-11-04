@@ -14,6 +14,8 @@ export interface StoredUser {
   passwordSalt: string;
   agencyName?: string;
   storeCode?: string;
+  referralCode?: string;
+  referredBy?: string;
   reraNumber?: string;
   operatingCity?: string;
   experienceYears?: number;
@@ -95,11 +97,31 @@ function ensureDataFiles() {
   }
 }
 
+export function generateUserReferralCode(user: { fullName: string; storeCode?: string; phone?: string; id?: string }): string {
+  if (user.storeCode) {
+    return user.storeCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  }
+  const namePart = user.fullName.replace(/[^a-zA-Z]/g, '').slice(0, 5).toUpperCase() || 'REF';
+  const phonePart = user.phone ? user.phone.replace(/[^0-9]/g, '').slice(-4) : (user.id || Math.random().toString(36)).slice(-4).toUpperCase();
+  return `${namePart}${phonePart}`;
+}
+
 export function getAllUsers(): StoredUser[] {
   ensureDataFiles();
   try {
     const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const users: StoredUser[] = JSON.parse(raw);
+    let modified = false;
+    for (const u of users) {
+      if (!u.referralCode) {
+        u.referralCode = generateUserReferralCode(u);
+        modified = true;
+      }
+    }
+    if (modified) {
+      saveUsers(users);
+    }
+    return users;
   } catch {
     return [];
   }
@@ -134,6 +156,8 @@ export function createNewUser(params: {
   password: string;
   agencyName?: string;
   storeCode?: string;
+  referralCode?: string;
+  referredBy?: string;
   reraNumber?: string;
   operatingCity?: string;
   experienceYears?: number;
@@ -162,6 +186,12 @@ export function createNewUser(params: {
   }
 
   const { hash, salt } = hashPassword(params.password);
+  const referralCode = params.referralCode?.trim() || generateUserReferralCode({
+    fullName: params.fullName,
+    storeCode: params.storeCode,
+    phone: normalizedPhone,
+  });
+
   const newUser: StoredUser = {
     id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
     fullName: params.fullName.trim(),
@@ -171,6 +201,9 @@ export function createNewUser(params: {
     passwordHash: hash,
     passwordSalt: salt,
     agencyName: params.agencyName?.trim(),
+    storeCode: params.storeCode?.trim(),
+    referralCode,
+    referredBy: params.referredBy?.trim(),
     reraNumber: params.reraNumber?.trim(),
     operatingCity: params.operatingCity?.trim(),
     dpdpConsent: true,

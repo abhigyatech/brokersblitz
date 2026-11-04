@@ -30,12 +30,22 @@ import {
   ChevronLeft,
   Search,
   ArrowRight,
+  Wallet,
+  Sparkles,
+  CreditCard,
+  Clock,
+  ChevronDown,
+  Gift,
 } from 'lucide-react';
 import { PropertyListing, UserRole, Lead } from '../../data/types';
 import { useTheme } from '../../components/ThemeProvider';
 import ListPropertyModal from '../../components/ListPropertyModal';
 import BrandLogo from '../../components/BrandLogo';
 import DashboardSkeleton from '../../components/DashboardSkeleton';
+import BrokerWalletView from '../../components/BrokerWalletView';
+import AdminWalletView from '../../components/AdminWalletView';
+import AdminReferralView from '../../components/AdminReferralView';
+import UserReferralCard from '../../components/UserReferralCard';
 
 interface BrokerItem {
   id: string;
@@ -49,6 +59,11 @@ interface BrokerItem {
   createdAt: string;
   listingsCount?: number;
   leadsCount?: number;
+  wallet?: {
+    totalBalance: number;
+    paidBalance: number;
+    freeBalance: number;
+  };
 }
 
 interface BuyerItem {
@@ -62,6 +77,11 @@ interface BuyerItem {
   enquiriesCount?: number;
   savedCount?: number;
   recentActivity?: string;
+  wallet?: {
+    totalBalance: number;
+    paidBalance: number;
+    freeBalance: number;
+  };
 }
 
 export default function DashboardPage() {
@@ -84,6 +104,16 @@ export default function DashboardPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
+
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [adminBrokers, setAdminBrokers] = useState<BrokerItem[]>([]);
@@ -91,6 +121,11 @@ export default function DashboardPage() {
 
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [overviewRoleFilter, setOverviewRoleFilter] = useState<'all' | 'broker' | 'buyer'>('all');
+  const [overviewStatusFilter, setOverviewStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [overviewSearchQuery, setOverviewSearchQuery] = useState('');
+  const [overviewBalanceFilter, setOverviewBalanceFilter] = useState<'all' | 'low'>('all');
 
   const [platformStats, setPlatformStats] = useState({
     totalBrokers: 0,
@@ -102,11 +137,43 @@ export default function DashboardPage() {
     totalListings: 0,
     activeListings: 0,
     pausedListings: 0,
+    expiredListings: 0,
+    soldListings: 0,
     totalLeads: 0,
+    totalPlatformCredits: 0,
+    totalPaidCredits: 0,
+    totalFreeCredits: 0,
+    totalRechargesVolume: 0,
+    walletsCount: 0,
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [walletSummary, setWalletSummary] = useState<{
+    total: number;
+    paid: number;
+    free: number;
+    nearestExpiryDays?: number;
+    nearestExpiryAmount?: number;
+  } | null>(null);
+
+  const fetchWalletSummary = () => {
+    fetch('/api/wallet/statement')
+      .then((r) => r.json())
+      .then((wData) => {
+        if (wData.success && (wData.statement || wData.wallet)) {
+          setWalletSummary({
+            total: wData.statement?.totalCredits ?? wData.wallet?.totalBalance ?? 0,
+            paid: wData.statement?.paidBalance ?? wData.wallet?.paidBalance ?? 0,
+            free: wData.statement?.freeBalance ?? wData.wallet?.freeBalance ?? 0,
+            nearestExpiryDays: wData.nearestExpiry?.daysLeft,
+            nearestExpiryAmount: wData.nearestExpiry?.amount,
+          });
+        }
+      })
+      .catch(() => {});
+  };
 
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -154,6 +221,7 @@ export default function DashboardPage() {
             })
             .catch(() => {});
         } else if (userObj.role === 'broker') {
+          fetchWalletSummary();
           const storeCode = (userObj.agency || userObj.name).toLowerCase().replace(/[^a-z0-9]/g, '');
           fetch(`/api/properties?broker=${storeCode}`)
             .then((r) => r.json())
@@ -250,6 +318,48 @@ export default function DashboardPage() {
     }
   };
 
+  const handleMarkListingAsSold = async (item: PropertyListing) => {
+    try {
+      const res = await fetch(`/api/properties/${item.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sold' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, status: 'sold', soldAt: new Date().toISOString() } : p))
+        );
+        showToast('Property marked as Sold Out! Daily charges paused.');
+      } else {
+        showToast(data.error || 'Failed to mark as sold');
+      }
+    } catch {
+      showToast('Error marking listing as sold');
+    }
+  };
+
+  const handleReactivateListing = async (item: PropertyListing) => {
+    try {
+      const res = await fetch(`/api/properties/${item.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reactivate' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, status: 'active', lastChargedAt: new Date().toISOString() } : p))
+        );
+        showToast('Listing reactivated with 2 credits!');
+      } else {
+        showToast(data.error || 'Failed to reactivate listing');
+      }
+    } catch {
+      showToast('Error reactivating listing');
+    }
+  };
+
   const handleUpdateVisitStatus = async (leadId: string, newStatus: Lead['status']) => {
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
@@ -321,6 +431,8 @@ export default function DashboardPage() {
     { id: 'buyers', label: 'Buyers', icon: Users },
     { id: 'listings', label: 'Properties', icon: Home },
     { id: 'leads', label: 'Site Visits & Leads', icon: CalendarCheck },
+    { id: 'wallet', label: 'Wallet & Ledger', icon: Wallet },
+    { id: 'referrals', label: 'Referral Program', icon: Gift },
     { id: 'admins', label: 'Admin Team', icon: ShieldCheck },
   ];
 
@@ -328,6 +440,8 @@ export default function DashboardPage() {
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'listings', label: 'My Properties', icon: Home },
     { id: 'visits', label: 'Leads & Visits', icon: CalendarCheck },
+    { id: 'wallet', label: 'Credits & Wallet', icon: Wallet },
+    { id: 'referrals', label: 'Refer & Earn', icon: Gift },
     { id: 'store', label: 'My Storefront', icon: Store },
   ];
 
@@ -335,6 +449,7 @@ export default function DashboardPage() {
     { id: 'overview', label: 'My Dashboard', icon: LayoutDashboard },
     { id: 'listings', label: 'Saved Properties', icon: Heart },
     { id: 'visits', label: 'My Enquiries', icon: CalendarCheck },
+    { id: 'referrals', label: 'Refer & Earn', icon: Gift },
   ];
 
   const navItems = isAdmin ? adminNavItems : isBroker ? brokerNavItems : buyerNavItems;
@@ -369,10 +484,54 @@ export default function DashboardPage() {
     return true;
   });
 
+  const combinedProfiles = [
+    ...adminBrokers.map((b) => ({
+      id: b.id,
+      fullName: b.fullName,
+      email: b.email,
+      phone: b.phone,
+      role: 'broker' as const,
+      agencyOrCity: `${b.agencyName} (${b.operatingCity})`,
+      isLocked: b.isLocked,
+      createdAt: b.createdAt,
+      activityLabel: `${b.listingsCount || 0} Listings • ${b.leadsCount || 0} Leads`,
+      wallet: b.wallet || { totalBalance: 0, paidBalance: 0, freeBalance: 0 },
+    })),
+    ...adminBuyers.map((u) => ({
+      id: u.id,
+      fullName: u.fullName,
+      email: u.email,
+      phone: u.phone,
+      role: 'buyer' as const,
+      agencyOrCity: u.recentActivity || 'Verified Customer',
+      isLocked: u.isLocked,
+      createdAt: u.createdAt,
+      activityLabel: `${u.enquiriesCount || 0} Enquiries • ${u.savedCount || 0} Saved`,
+      wallet: u.wallet || { totalBalance: 0, paidBalance: 0, freeBalance: 0 },
+    })),
+  ];
+
+  const filteredOverviewProfiles = combinedProfiles.filter((p) => {
+    if (overviewRoleFilter !== 'all' && p.role !== overviewRoleFilter) return false;
+    if (overviewStatusFilter === 'active' && p.isLocked) return false;
+    if (overviewStatusFilter === 'inactive' && !p.isLocked) return false;
+    if (overviewBalanceFilter === 'low' && (p.wallet?.totalBalance ?? 0) >= 10) return false;
+    if (overviewSearchQuery.trim()) {
+      const q = overviewSearchQuery.toLowerCase();
+      return (
+        p.fullName.toLowerCase().includes(q) ||
+        p.email.toLowerCase().includes(q) ||
+        p.phone.includes(q) ||
+        p.agencyOrCity.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#F4F0EA] dark:bg-[#141210] text-[#1A1A1A] dark:text-white font-sans flex flex-col md:flex-row overflow-hidden transition-colors duration-200">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in duration-150">
+        <div className="fixed bottom-6 right-6 z-[99999] bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 text-[#1A1A1A] dark:text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in duration-150">
           <span className="w-2 h-2 rounded-full bg-[#DF6400] animate-pulse" />
           <span className="text-xs font-bold">{toastMessage}</span>
         </div>
@@ -420,8 +579,14 @@ export default function DashboardPage() {
                   <h4 className="text-xs font-bold text-[#1A1A1A] dark:text-white truncate">
                     {currentUser?.name}
                   </h4>
-                  <span className="text-[10px] uppercase font-mono font-extrabold px-1.5 py-0.5 rounded bg-[#DF6400]/10 text-[#DF6400]">
-                    {isAdmin ? 'Admin Console' : isBroker ? 'Broker Portal' : 'Buyer Account'}
+                  <span className={`text-[10px] uppercase font-mono font-extrabold px-1.5 py-0.5 rounded ${
+                    isAdmin
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                      : isBroker
+                      ? 'bg-[#DF6400]/10 text-[#DF6400]'
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  }`}>
+                    {isAdmin ? 'Platform Admin' : isBroker ? 'Broker Portal' : 'Buyer Account'}
                   </span>
                 </div>
               )}
@@ -479,7 +644,7 @@ export default function DashboardPage() {
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-14 sm:h-16 px-4 sm:px-6 md:px-8 border-b border-[#1A1A1A]/10 dark:border-white/10 bg-white/80 dark:bg-[#1A1815]/80 backdrop-blur-md flex items-center justify-between flex-shrink-0">
+        <header className="relative z-30 h-14 sm:h-16 px-4 sm:px-6 md:px-8 border-b border-[#1A1A1A]/10 dark:border-white/10 bg-white/80 dark:bg-[#1A1815]/80 backdrop-blur-md flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -489,15 +654,116 @@ export default function DashboardPage() {
             </button>
             <div>
               <h2 className="text-sm sm:text-base font-black text-[#1A1A1A] dark:text-white">
-                {isAdmin ? 'Admin Console' : isBroker ? 'Broker Portal' : 'Buyer Dashboard'}
+                {isAdmin ? 'Platform Administration Console' : isBroker ? 'Broker Portal' : 'Buyer Dashboard'}
               </h2>
               <p className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] hidden sm:block">
-                {isAdmin ? 'Manage brokers, buyers, listings and visits' : isBroker ? currentUser?.agency : 'Saved properties and site visit enquiries'}
+                {isAdmin ? 'BrokersBlitz Headquarters • Pan India Platform Operations & Governance' : isBroker ? currentUser?.agency : 'Saved properties and site visit enquiries'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('wallet')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:border-purple-500 text-purple-700 dark:text-purple-400 text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Platform Treasury: {platformStats.totalPlatformCredits || 0} Credits</span>
+              </button>
+            )}
+
+            {isBroker && (
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('wallet')}
+                  onMouseEnter={fetchWalletSummary}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{walletSummary !== null ? `${walletSummary.total} Credits` : 'Credits'}</span>
+                  <ChevronDown className="w-3 h-3 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
+                </button>
+
+                <div className="absolute right-0 top-full pt-2 z-50 pointer-events-none group-hover:pointer-events-auto opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 translate-y-1 transition-all duration-200 ease-out origin-top-right">
+                  <div className="w-72 sm:w-80 p-4 rounded-2xl bg-white dark:bg-[#1E1B17] border border-[#1A1A1A]/10 dark:border-white/10 shadow-2xl space-y-3 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#5C5852] dark:text-[#A8A29A]">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Wallet Balance</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                        Active
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between border-b border-[#1A1A1A]/5 dark:border-white/5 pb-2">
+                      <span className="text-2xl font-black text-[#1A1A1A] dark:text-white font-mono">
+                        {walletSummary ? walletSummary.total : 0}
+                      </span>
+                      <span className="text-xs text-[#5C5852] dark:text-[#A8A29A] font-semibold">Total Credits Available</span>
+                    </div>
+
+                    <div className="space-y-2 pt-1 text-xs">
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-[#F4F0EA]/60 dark:bg-[#141210]/60">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#1A1A1A] dark:text-white text-[11px]">Paid Credits</div>
+                            <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A]">Non-expiring • Recharged</div>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
+                          {walletSummary ? walletSummary.paid : 0}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-[#F4F0EA]/60 dark:bg-[#141210]/60">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                            <Sparkles className="w-3.5 h-3.5 text-[#DF6400]" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#1A1A1A] dark:text-white text-[11px]">Bonus Credits</div>
+                            <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A]">Platform Grants & Welcome</div>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                          {walletSummary ? walletSummary.free : 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    {walletSummary?.nearestExpiryAmount && walletSummary.nearestExpiryAmount > 0 ? (
+                      <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-900 dark:text-amber-200 font-semibold">
+                        <Clock className="w-3 h-3 text-[#DF6400] flex-shrink-0" />
+                        <span>
+                          {walletSummary.nearestExpiryAmount} bonus credits expire in {walletSummary.nearestExpiryDays} days
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] leading-relaxed">
+                      Rate: 2 credits/day per active property listing beyond first 5 free listings.
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('wallet')}
+                      className="w-full py-1.5 rounded-xl bg-[#DF6400] hover:bg-[#C75700] text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
+                    >
+                      <span>Open Passbook & Recharge</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#1A1A1A]/10 dark:border-white/10 text-xs font-bold text-[#5C5852] dark:text-[#A8A29A] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F4F0EA] dark:hover:bg-[#24201C] transition-colors"
@@ -528,93 +794,272 @@ export default function DashboardPage() {
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto space-y-6">
           {isAdmin && activeTab === 'overview' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
                   <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                    <span className="text-[10px] font-mono font-bold uppercase">Total Brokers</span>
+                    <span className="text-[10px] font-mono font-bold uppercase">Overall Brokers</span>
                     <Building2 className="w-4 h-4 text-[#DF6400]" />
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-[#1A1A1A] dark:text-white">
+                  <div className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white">
                     {platformStats.totalBrokers}
                   </div>
-                  <div className="mt-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                    {platformStats.activeBrokers} Active • {platformStats.lockedBrokers} Inactive
+                  <div className="mt-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    {platformStats.activeBrokers} Active • {platformStats.lockedBrokers} Suspended
                   </div>
                 </div>
 
-                <div className="p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
                   <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                    <span className="text-[10px] font-mono font-bold uppercase">Total Buyers</span>
-                    <Users className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-[#1A1A1A] dark:text-white">
-                    {platformStats.totalBuyers}
-                  </div>
-                  <div className="mt-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                    {platformStats.activeBuyers} Active • {platformStats.lockedBuyers} Inactive
-                  </div>
-                </div>
-
-                <div className="p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
-                  <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                    <span className="text-[10px] font-mono font-bold uppercase">Properties Listed</span>
+                    <span className="text-[10px] font-mono font-bold uppercase">Overall Listings</span>
                     <Home className="w-4 h-4 text-[#DF6400]" />
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-[#DF6400]">
+                  <div className="text-xl sm:text-2xl font-black text-[#DF6400]">
                     {platformStats.totalListings}
                   </div>
-                  <div className="mt-2 text-[11px] text-[#5C5852] dark:text-[#A8A29A] font-semibold">
-                    {platformStats.activeListings} Active • {platformStats.pausedListings} Inactive
+                  <div className="mt-1.5 text-[10px] text-[#5C5852] dark:text-[#A8A29A] font-semibold truncate">
+                    {platformStats.activeListings} Active • {platformStats.expiredListings || 0} Expired • {platformStats.pausedListings} Paused
                   </div>
                 </div>
 
-                <div className="p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
                   <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
-                    <span className="text-[10px] font-mono font-bold uppercase">Site Visits & Leads</span>
+                    <span className="text-[10px] font-mono font-bold uppercase">Active Profiles</span>
+                    <Users className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white">
+                    {platformStats.activeBrokers + platformStats.activeBuyers}
+                  </div>
+                  <div className="mt-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                    {platformStats.lockedBrokers + platformStats.lockedBuyers} Inactive / Suspended
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                  <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
+                    <span className="text-[10px] font-mono font-bold uppercase">Wallet Treasury</span>
+                    <Wallet className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white">
+                    {platformStats.totalPlatformCredits || 0} <span className="text-xs font-bold text-[#5C5852]">Credits</span>
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    {platformStats.totalPaidCredits || 0} Paid • {platformStats.totalFreeCredits || 0} Bonus
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                  <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
+                    <span className="text-[10px] font-mono font-bold uppercase">Recharges Volume</span>
+                    <CreditCard className="w-4 h-4 text-[#DF6400]" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white">
+                    ₹{(platformStats.totalRechargesVolume || 0).toLocaleString('en-IN')}
+                  </div>
+                  <div className="mt-1.5 text-[10px] font-semibold text-[#5C5852] dark:text-[#A8A29A]">
+                    Razorpay Gateway Vol.
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                  <div className="flex items-center justify-between text-[#5C5852] dark:text-[#A8A29A] mb-1">
+                    <span className="text-[10px] font-mono font-bold uppercase">Verified Leads</span>
                     <CalendarCheck className="w-4 h-4 text-emerald-500" />
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-[#1A1A1A] dark:text-white">
+                  <div className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-white">
                     {platformStats.totalLeads}
                   </div>
-                  <div className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                    Live Chatbot & WhatsApp Leads
+                  <div className="mt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    WhatsApp & Chatbot Enquiries
                   </div>
+                </div>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">
+                      User Profiles & Customer Wallet Balances
+                    </h3>
+                    <p className="text-xs text-[#5C5852] dark:text-[#A8A29A]">
+                      Live overview of all registered brokers and buyers, their real-time wallet balances, and 1-click account suspension control.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5852]" />
+                      <input
+                        type="text"
+                        value={overviewSearchQuery}
+                        onChange={(e) => setOverviewSearchQuery(e.target.value)}
+                        placeholder="Search name, phone, agency..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/10 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-[#DF6400]"
+                      />
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/10 dark:border-white/10 p-0.5 text-xs font-bold">
+                      {(['all', 'broker', 'buyer'] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setOverviewRoleFilter(r)}
+                          className={`px-2.5 py-1 rounded-lg capitalize transition-all ${
+                            overviewRoleFilter === r ? 'bg-[#DF6400] text-white' : 'text-[#5C5852] dark:text-[#A8A29A]'
+                          }`}
+                        >
+                          {r === 'all' ? 'All Roles' : r === 'broker' ? 'Brokers' : 'Customers'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/10 dark:border-white/10 p-0.5 text-xs font-bold">
+                      {(['all', 'active', 'inactive'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setOverviewStatusFilter(s)}
+                          className={`px-2.5 py-1 rounded-lg capitalize transition-all ${
+                            overviewStatusFilter === s ? 'bg-[#DF6400] text-white' : 'text-[#5C5852] dark:text-[#A8A29A]'
+                          }`}
+                        >
+                          {s === 'all' ? 'All Status' : s === 'active' ? 'Active' : 'Suspended'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/10 dark:border-white/10 p-0.5 text-xs font-bold">
+                      {(['all', 'low'] as const).map((b) => (
+                        <button
+                          key={b}
+                          onClick={() => setOverviewBalanceFilter(b)}
+                          className={`px-2.5 py-1 rounded-lg capitalize transition-all ${
+                            overviewBalanceFilter === b ? 'bg-[#DF6400] text-white' : 'text-[#5C5852] dark:text-[#A8A29A]'
+                          }`}
+                        >
+                          {b === 'all' ? 'All Balances' : 'Low (<10)'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#1A1A1A]/10 dark:border-white/10 text-[10px] font-mono font-bold uppercase text-[#5C5852] dark:text-[#A8A29A]">
+                        <th className="py-2.5 px-3">Profile / Agency</th>
+                        <th className="py-2.5 px-3">Contact</th>
+                        <th className="py-2.5 px-3">Account Status</th>
+                        <th className="py-2.5 px-3">Activity</th>
+                        <th className="py-2.5 px-3">Wallet Balance</th>
+                        <th className="py-2.5 px-3 text-right">Suspend / Inactive Control</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1A1A1A]/5 dark:divide-white/5 text-xs">
+                      {filteredOverviewProfiles.length > 0 ? (
+                        filteredOverviewProfiles.map((p) => {
+                          const total = p.wallet?.totalBalance ?? 0;
+                          const paid = p.wallet?.paidBalance ?? 0;
+                          const free = p.wallet?.freeBalance ?? 0;
+
+                          return (
+                            <tr key={p.id} className="hover:bg-[#F4F0EA]/60 dark:hover:bg-[#181614]/60 transition-colors">
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                                    p.role === 'broker' ? 'bg-[#DF6400]/15 text-[#DF6400]' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                  }`}>
+                                    {p.fullName.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-[#1A1A1A] dark:text-white flex items-center gap-1.5">
+                                      <span>{p.fullName}</span>
+                                      <span className={`text-[9px] font-mono font-extrabold uppercase px-1.5 py-0.2 rounded ${
+                                        p.role === 'broker' ? 'bg-[#DF6400]/10 text-[#DF6400]' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                      }`}>
+                                        {p.role === 'broker' ? 'Broker' : 'Customer'}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] truncate max-w-[200px]">
+                                      {p.agencyOrCity}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3 px-3">
+                                <div className="font-mono text-[11px] text-[#1A1A1A] dark:text-white">{p.phone}</div>
+                                <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] truncate max-w-[180px]">{p.email}</div>
+                              </td>
+
+                              <td className="py-3 px-3">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  p.isLocked
+                                    ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400'
+                                    : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${p.isLocked ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                                  <span>{p.isLocked ? 'Suspended' : 'Active'}</span>
+                                </span>
+                              </td>
+
+                              <td className="py-3 px-3 text-[11px] text-[#5C5852] dark:text-[#A8A29A] font-semibold">
+                                {p.activityLabel}
+                              </td>
+
+                              <td className="py-3 px-3">
+                                <div className="font-black text-[#1A1A1A] dark:text-white text-xs">
+                                  {total} <span className="text-[10px] font-normal text-[#5C5852]">Credits</span>
+                                </div>
+                                <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] font-mono">
+                                  Paid: {paid} • Bonus: {free}
+                                </div>
+                              </td>
+
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={() => handleToggleUserStatus(p.id)}
+                                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all shadow-sm ${
+                                    p.isLocked
+                                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                      : 'border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                                  }`}
+                                >
+                                  {p.isLocked ? (
+                                    <>
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Activate Profile</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Ban className="w-3.5 h-3.5" />
+                                      <span>Suspend Profile</span>
+                                    </>
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-xs text-[#5C5852] dark:text-[#A8A29A]">
+                            No customer or broker profiles match your search criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="p-6 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">Brokers Summary</h3>
-                    <button onClick={() => setActiveTab('brokers')} className="inline-flex items-center gap-1 text-xs font-bold text-[#DF6400] hover:underline">
-                      <span>Manage Brokers</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {adminBrokers.slice(0, 5).map((b) => (
-                      <div key={b.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/5 dark:border-white/5">
-                        <div>
-                          <div className="text-xs font-bold text-[#1A1A1A] dark:text-white">{b.agencyName}</div>
-                          <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A]">
-                            {b.fullName} • {b.operatingCity} • {b.phone}
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          b.isLocked ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
-                        }`}>
-                          {b.isLocked ? 'Inactive' : 'Active'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">Recent Properties</h3>
+                    <div>
+                      <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">Recent Properties & Status</h3>
+                      <p className="text-[11px] text-[#5C5852] dark:text-[#A8A29A]">Toggle live listing status across the network</p>
+                    </div>
                     <button onClick={() => setActiveTab('listings')} className="inline-flex items-center gap-1 text-xs font-bold text-[#DF6400] hover:underline">
-                      <span>Manage Properties</span>
+                      <span>View All ({properties.length})</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -630,7 +1075,11 @@ export default function DashboardPage() {
                           </div>
                           <button
                             onClick={() => handleToggleListingStatus(p)}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#DF6400] text-white hover:bg-[#C75700]"
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              p.status === 'paused'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-[#DF6400] text-white hover:bg-[#C75700]'
+                            }`}
                           >
                             {p.status === 'paused' ? 'Set Active' : 'Set Inactive'}
                           </button>
@@ -640,6 +1089,45 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-xs text-[#5C5852] dark:text-[#A8A29A] text-center py-8">
                       No properties listed yet.
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white dark:bg-[#24201C] border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white">Recent Buyer Leads & Visits</h3>
+                      <p className="text-[11px] text-[#5C5852] dark:text-[#A8A29A]">Inquiries generated via WhatsApp & AI assistant</p>
+                    </div>
+                    <button onClick={() => setActiveTab('leads')} className="inline-flex items-center gap-1 text-xs font-bold text-[#DF6400] hover:underline">
+                      <span>View All ({leads.length})</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  {leads.length > 0 ? (
+                    <div className="space-y-3">
+                      {leads.slice(0, 5).map((l) => (
+                        <div key={l.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#F4F0EA] dark:bg-[#181614] border border-[#1A1A1A]/5 dark:border-white/5">
+                          <div>
+                            <div className="text-xs font-bold text-[#1A1A1A] dark:text-white flex items-center gap-1.5">
+                              <span>{l.buyerName}</span>
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-600 uppercase font-bold">
+                                {l.source}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A] line-clamp-1">
+                              {l.propertyTitle} • {l.buyerPhone}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#DF6400]/10 text-[#DF6400] capitalize">
+                            {l.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-[#5C5852] dark:text-[#A8A29A] text-center py-8">
+                      No customer leads recorded yet.
                     </div>
                   )}
                 </div>
@@ -992,6 +1480,14 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {isAdmin && activeTab === 'wallet' && (
+            <AdminWalletView onToast={showToast} />
+          )}
+
+          {isAdmin && activeTab === 'referrals' && (
+            <AdminReferralView onToast={showToast} />
+          )}
+
           {isAdmin && activeTab === 'admins' && (
             <div className="max-w-2xl bg-white dark:bg-[#24201C] rounded-3xl p-6 sm:p-8 border border-[#1A1A1A]/10 dark:border-white/10 shadow-sm space-y-5">
               <div>
@@ -1159,7 +1655,7 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="text-lg font-black text-[#1A1A1A] dark:text-white">My Properties</h3>
                   <p className="text-xs text-[#5C5852] dark:text-[#A8A29A]">
-                    Manage your active inventory, update pricing, or post new properties.
+                    Manage your active inventory, update pricing, mark deals as sold, or post new properties.
                   </p>
                 </div>
                 <button
@@ -1170,6 +1666,13 @@ export default function DashboardPage() {
                 </button>
               </div>
 
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#DF6400] flex-shrink-0" />
+                  <span>First 5 listings are free for 15 days. Beyond 5 listings or after 15 days, listings remain active at 2 credits/day. Sold listings remain free on your storefront!</span>
+                </div>
+              </div>
+
               {properties.length > 0 ? (
                 <div className="bg-white dark:bg-[#24201C] rounded-3xl border border-[#1A1A1A]/10 dark:border-white/10 overflow-hidden shadow-sm">
                   <table className="w-full text-left text-xs">
@@ -1178,42 +1681,90 @@ export default function DashboardPage() {
                         <th className="p-3.5">Property</th>
                         <th className="p-3.5">Category</th>
                         <th className="p-3.5">Price</th>
-                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Billing & Status</th>
                         <th className="p-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1A1A1A]/5 dark:divide-white/5">
-                      {properties.map((p) => (
-                        <tr key={p.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                          <td className="p-3.5">
-                            <div className="font-bold text-[#1A1A1A] dark:text-white">{p.title}</div>
-                            <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A]">{p.locality}, {p.city}</div>
-                          </td>
-                          <td className="p-3.5 text-[#5C5852] dark:text-[#A8A29A]">{p.categoryLabel}</td>
-                          <td className="p-3.5 font-bold text-[#DF6400]">{p.formattedPrice}</td>
-                          <td className="p-3.5">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              p.status === 'paused' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
-                            }`}>
-                              {p.status === 'paused' ? 'Inactive' : 'Active'}
-                            </span>
-                          </td>
-                          <td className="p-3.5 text-right space-x-2">
-                            <button
-                              onClick={() => handleToggleListingStatus(p)}
-                              className="px-2.5 py-1 rounded-lg border border-[#1A1A1A]/10 dark:border-white/10 text-xs font-bold hover:bg-[#F4F0EA] dark:hover:bg-[#181614]"
-                            >
-                              {p.status === 'paused' ? 'Activate' : 'Deactivate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteListing(p)}
-                              className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {properties.map((p) => {
+                        const isExpired = p.status === 'expired';
+                        const isSold = p.status === 'sold';
+                        const isPaused = p.status === 'paused';
+                        const isFree = p.isFreeListing && p.freeUntil && new Date(p.freeUntil).getTime() > Date.now();
+
+                        return (
+                          <tr key={p.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                            <td className="p-3.5">
+                              <div className="font-bold text-[#1A1A1A] dark:text-white">{p.title}</div>
+                              <div className="text-[10px] text-[#5C5852] dark:text-[#A8A29A]">{p.locality}, {p.city}</div>
+                            </td>
+                            <td className="p-3.5 text-[#5C5852] dark:text-[#A8A29A]">{p.categoryLabel}</td>
+                            <td className="p-3.5 font-bold text-[#DF6400]">{p.formattedPrice}</td>
+                            <td className="p-3.5">
+                              {isSold ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
+                                  Sold Out
+                                </span>
+                              ) : isExpired ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400" title={p.expiredReason}>
+                                  Expired (Unpaid)
+                                </span>
+                              ) : isPaused ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
+                                  Paused
+                                </span>
+                              ) : isFree ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                                  Free (15 Days)
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
+                                  Active (2 cr/day)
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                              {isExpired ? (
+                                <button
+                                  onClick={() => handleReactivateListing(p)}
+                                  className="px-2.5 py-1 rounded-lg bg-[#DF6400] text-white text-xs font-bold hover:bg-[#C75700]"
+                                >
+                                  Reactivate (2 Cr)
+                                </button>
+                              ) : isSold ? (
+                                <button
+                                  onClick={() => handleReactivateListing(p)}
+                                  className="px-2.5 py-1 rounded-lg border border-[#1A1A1A]/10 dark:border-white/10 text-xs font-bold hover:bg-[#F4F0EA] dark:hover:bg-[#181614]"
+                                >
+                                  Re-list
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleMarkListingAsSold(p)}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700"
+                                    title="Mark property as Sold. Stops daily charges."
+                                  >
+                                    Mark Sold
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleListingStatus(p)}
+                                    className="px-2.5 py-1 rounded-lg border border-[#1A1A1A]/10 dark:border-white/10 text-xs font-bold hover:bg-[#F4F0EA] dark:hover:bg-[#181614]"
+                                  >
+                                    {isPaused ? 'Resume' : 'Pause'}
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteListing(p)}
+                                className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1297,6 +1848,23 @@ export default function DashboardPage() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {isBroker && activeTab === 'wallet' && currentUser && (
+            <div className="space-y-6">
+              <UserReferralCard onToast={showToast} />
+              <BrokerWalletView
+                brokerId={currentUser.id}
+                brokerName={currentUser.name}
+                onToast={showToast}
+              />
+            </div>
+          )}
+
+          {!isAdmin && activeTab === 'referrals' && (
+            <div className="max-w-4xl space-y-6">
+              <UserReferralCard onToast={showToast} />
             </div>
           )}
 

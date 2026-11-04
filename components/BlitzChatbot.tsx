@@ -23,6 +23,7 @@ import {
   Search
 } from 'lucide-react';
 import { generateWhatsAppQRMatrix } from '@/lib/qr';
+import { useLanguage } from './LanguageProvider';
 
 interface Message {
   id: string;
@@ -55,6 +56,7 @@ export default function BlitzChatbot({
   isOpen: externalIsOpen,
   onToggle: externalOnToggle,
 }: BlitzChatbotProps) {
+  const { t, language } = useLanguage();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const toggleChat = externalOnToggle || (() => setInternalIsOpen(!internalIsOpen));
@@ -107,6 +109,16 @@ export default function BlitzChatbot({
     setMinBookingDate(dateStr);
     setSelectedVisitDate(dateStr);
   }, []);
+
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === 'm-welcome'
+          ? { ...m, text: t('bot.welcomeText', m.text) }
+          : m
+      )
+    );
+  }, [language, t]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -520,7 +532,7 @@ export default function BlitzChatbot({
                 }}
               >
                 <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1B17] text-[#1A1A1A] dark:text-white text-xs font-bold shadow-lg border border-[#1A1A1A]/10 dark:border-white/10 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  Chat Support
+                  {t('bot.speedDialChat', 'Chat Support')}
                 </span>
                 <button
                   type="button"
@@ -581,7 +593,7 @@ export default function BlitzChatbot({
 
           <div className="p-6 space-y-5 text-center bg-[#ECE5DD]/25 dark:bg-[#111B21]">
             <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-              Scan with your phone to start chatting immediately
+              {t('bot.scanQr', 'Scan with your phone to start chatting immediately')}
             </p>
 
             <div className="relative w-48 h-48 mx-auto bg-white p-3 rounded-2xl shadow-md border border-black/5 flex items-center justify-center">
@@ -623,12 +635,12 @@ export default function BlitzChatbot({
                 {copiedNumber ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('bot.copied', 'Copied!')}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                    <span>Copy Number</span>
+                    <span>{t('bot.copyNumber', 'Copy Number')}</span>
                   </>
                 )}
               </button>
@@ -663,13 +675,13 @@ export default function BlitzChatbot({
 
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs font-black tracking-tight text-[#1A1A1A] dark:text-white">BrokersBlitz Assistant</h3>
+                  <h3 className="text-xs font-black tracking-tight text-[#1A1A1A] dark:text-white">{t('bot.assistantTitle', 'BrokersBlitz Assistant')}</h3>
                   <span className="px-1.5 py-0.5 rounded-full bg-[#DF6400]/10 text-[#DF6400] text-[9px] font-black uppercase tracking-wider">
                     AI
                   </span>
                 </div>
                 <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block mt-0.5">
-                  Pan-India Advisory • Always Live
+                  {t('bot.online', 'Pan-India Advisory • Always Live')}
                 </span>
               </div>
             </div>
@@ -743,7 +755,7 @@ export default function BlitzChatbot({
                     <div className="mt-2.5 pt-2.5 border-t border-black/5 dark:border-white/10 space-y-2.5">
                       <div className="space-y-1">
                         <label className="block text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                          Select Walkthrough Date:
+                          {t('bot.dateLabel', 'Select Walkthrough Date:')}
                         </label>
                         <input
                           type="date"
@@ -985,11 +997,10 @@ export default function BlitzChatbot({
 
           <div className="px-3 py-2 border-t border-black/5 dark:border-white/10 bg-white dark:bg-[#1A1816] flex gap-1.5 overflow-x-auto no-scrollbar shrink-0">
             {[
-              'Book Site Visit',
-              'Commercial Offices',
-              'Luxury Penthouses',
-              'RERA Verification Hint',
-              'List as Broker',
+              t('bot.bookVisit', 'Book Site Visit'),
+              t('bot.commercialOffices', 'Commercial Offices'),
+              t('bot.luxuryPenthouses', 'Luxury Penthouses'),
+              t('bot.panIndiaLocations', 'Pan India Locations'),
             ].map((pill) => (
               <button
                 key={pill}
@@ -1016,14 +1027,14 @@ export default function BlitzChatbot({
                 ? 'bg-rose-500 text-white border-rose-600 animate-pulse shadow-md shadow-rose-500/20'
                 : 'bg-gray-100 dark:bg-[#25221F] text-gray-500 dark:text-gray-400 hover:text-[#DF6400] border-black/5 dark:border-white/10'
                 }`}
-              title={isListening ? 'Listening... click to stop' : 'Click to talk'}
+              title={isListening ? t('bot.listening', 'Listening... click to stop') : t('bot.clickToSpeak', 'Click to talk')}
             >
               <Mic className="w-4 h-4" />
             </button>
 
             <input
               type="text"
-              placeholder="Ask anything or schedule inspection..."
+              placeholder={t('bot.inputPlaceholder', 'Ask anything or schedule inspection...')}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               className="flex-1 bg-gray-100 dark:bg-[#25221F] border border-black/5 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#DF6400] focus:bg-white dark:focus:bg-[#151311] outline-none transition-all"

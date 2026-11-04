@@ -16,9 +16,11 @@ import NavbarSearchModal from '../components/NavbarSearchModal';
 import ShareModal from '../components/ShareModal';
 import BlitzChatbot from '../components/BlitzChatbot';
 import Footer from '../components/Footer';
+import { useLanguage } from '../components/LanguageProvider';
 
 export default function HomePage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [properties, setProperties] = useState<PropertyListing[]>(
     initialPropertiesData as PropertyListing[]
   );
@@ -162,13 +164,13 @@ export default function HomePage() {
   };
 
   const categoryTabs = [
-    { id: 'all', label: 'All Categories' },
-    { id: 'residential', label: 'Residential Flats' },
-    { id: 'villa_penthouse', label: 'Villas & Penthouses' },
-    { id: 'commercial', label: 'Commercial & Offices' },
-    { id: 'retail', label: 'Retail & Shops' },
-    { id: 'industrial', label: 'Warehouses & Industrial' },
-    { id: 'plots_land', label: 'Plots & Land' },
+    { id: 'all', label: t('categories.tabAll', 'All Categories') },
+    { id: 'residential', label: t('categories.tabApartment', 'Residential Flats') },
+    { id: 'villa_penthouse', label: t('categories.tabVilla', 'Villas & Penthouses') },
+    { id: 'commercial', label: t('categories.tabCommercialOffice', 'Commercial & Offices') },
+    { id: 'retail', label: t('categories.tabRetailShop', 'Retail & Shops') },
+    { id: 'industrial', label: t('categories.tabWarehouse', 'Warehouses & Industrial') },
+    { id: 'plots_land', label: t('categories.tabPlot', 'Plots & Land') },
   ];
 
   const filteredProperties = useMemo(() => {
@@ -262,13 +264,13 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-[#DF6400] bg-[#DF6400]/10 px-2.5 py-1 rounded-md">
-                Browse Properties
+                {t('categories.browseProperties', 'Browse Properties')}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-[#1A1A1A] dark:text-white tracking-tight mt-2.5">
-                Real Estate Across All Categories
+                {t('categories.allHeading', 'Real Estate Across All Categories')}
               </h2>
               <p className="text-xs sm:text-sm text-[#5C5852] dark:text-[#A8A29A] mt-1.5 font-medium">
-                Homes, workspaces, and investments curated for every ambition.
+                {t('categories.allSub', 'Homes, workspaces, and investments curated for every ambition.')}
               </p>
             </div>
 
@@ -276,7 +278,7 @@ export default function HomePage() {
               href="/search"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-[#1C1917] border border-[#1A1A1A]/10 dark:border-white/10 text-xs font-semibold text-[#1A1A1A] dark:text-white hover:border-[#DF6400] hover:text-[#DF6400] shadow-sm transition-all self-start md:self-auto"
             >
-              <span>Explore All Properties</span>
+              <span>{t('categories.exploreAll', 'Explore All Properties')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -301,9 +303,9 @@ export default function HomePage() {
               <div className="flex items-center gap-1.5 p-1 bg-[#EBE5DC]/50 dark:bg-[#1C1917] rounded-xl w-fit">
                 {(
                   [
-                    { id: 'all', label: 'All' },
-                    { id: 'sale', label: 'Buy' },
-                    { id: 'rent', label: 'Rent' },
+                    { id: 'all', label: t('categories.purposeAll', 'All') },
+                    { id: 'sale', label: t('categories.purposeBuy', 'Buy') },
+                    { id: 'rent', label: t('categories.purposeRent', 'Rent') },
                   ] as const
                 ).map((tab) => (
                   <button
@@ -321,17 +323,17 @@ export default function HomePage() {
 
               <div className="flex items-center gap-3 self-end sm:self-auto">
                 <span className="text-xs text-[#706B63] dark:text-[#8E877F]">
-                  <strong className="text-[#1A1A1A] dark:text-white font-semibold">{filteredProperties.length}</strong> listings
+                  <strong className="text-[#1A1A1A] dark:text-white font-semibold">{filteredProperties.length}</strong> {t('categories.listingsCount', 'listings')}
                 </span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
                   className="bg-white dark:bg-[#1C1917] border border-[#1A1A1A]/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-[#1A1A1A] dark:text-white outline-none cursor-pointer hover:border-[#1A1A1A]/20 dark:hover:border-white/20 transition-colors"
                 >
-                  <option value="featured">Featured First</option>
-                  <option value="price_low">Price: Low to High</option>
-                  <option value="price_high">Price: High to Low</option>
-                  <option value="newest">Recently Listed</option>
+                  <option value="featured">{t('categories.sortFeatured', 'Featured First')}</option>
+                  <option value="price_low">{t('categories.sortPriceLow', 'Price: Low to High')}</option>
+                  <option value="price_high">{t('categories.sortPriceHigh', 'Price: High to Low')}</option>
+                  <option value="newest">{t('categories.sortNewest', 'Recently Listed')}</option>
                 </select>
               </div>
             </div>
@@ -355,17 +357,17 @@ export default function HomePage() {
                   <Building2 className="w-6 h-6" />
                 </div>
                 <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-white">
-                  No properties found in this category
+                  {t('categories.emptyTitle', 'No properties found in this category')}
                 </h3>
                 <p className="text-xs text-[#706B63] dark:text-[#8E877F] mt-1 max-w-sm">
-                  Try switching categories or purpose, or list a property directly to showcase it here.
+                  {t('categories.emptySub', 'Try switching categories or purpose, or list a property directly to showcase it here.')}
                 </p>
                 <button
                   onClick={() => router.push(currentUser?.role === 'broker' ? '/dashboard' : '/login?redirect=/dashboard')}
                   className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DF6400] hover:bg-[#C75700] text-white text-xs font-semibold shadow-sm transition-all"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Post Property Listing</span>
+                  <span>{t('categories.emptyBtn', 'Post Property Listing')}</span>
                 </button>
               </div>
             )}
@@ -377,15 +379,15 @@ export default function HomePage() {
             <div className="min-w-0 flex-1">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-md bg-[#DF6400]/10 text-[#DF6400] text-[10px] font-black uppercase tracking-wider">
                 <Store className="w-3.5 h-3.5" />
-                <span>Verified Partners</span>
+                <span>{t('brokersSection.badge', 'Verified Partners')}</span>
               </div>
               <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-black text-[#1A1A1A] dark:text-white tracking-tight mt-1.5 sm:mt-2.5 truncate">
-                <span className="sm:hidden">Verified Broker Stores</span>
-                <span className="hidden sm:inline">Verified Broker Stores By Location</span>
+                <span className="sm:hidden">{t('brokersSection.headingMobile', 'Verified Broker Stores')}</span>
+                <span className="hidden sm:inline">{t('brokersSection.headingDesktop', 'Verified Broker Stores By Location')}</span>
               </h2>
               <p className="text-xs sm:text-sm text-[#5C5852] dark:text-[#A8A29A] mt-0.5 sm:mt-1 font-medium truncate">
-                <span className="sm:hidden">Connect with certified advisors.</span>
-                <span className="hidden sm:inline">Connect directly with certified real estate advisors across Indian metros.</span>
+                <span className="sm:hidden">{t('brokersSection.subMobile', 'Connect with certified advisors.')}</span>
+                <span className="hidden sm:inline">{t('brokersSection.subDesktop', 'Connect directly with certified real estate advisors across Indian metros.')}</span>
               </p>
             </div>
 
@@ -393,8 +395,8 @@ export default function HomePage() {
               href="/brokers"
               className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[#DF6400] text-white text-xs font-bold hover:bg-[#C75700] shadow-sm transition-all flex-shrink-0"
             >
-              <span className="sm:hidden">All Stores</span>
-              <span className="hidden sm:inline">Explore All Broker Stores</span>
+              <span className="sm:hidden">{t('brokersSection.btnMobile', 'All Stores')}</span>
+              <span className="hidden sm:inline">{t('brokersSection.btnDesktop', 'Explore All Broker Stores')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -448,10 +450,10 @@ export default function HomePage() {
 
                 <div className="pt-3 mt-3 border-t border-[#1A1A1A]/5 dark:border-white/5 flex items-center justify-between text-xs">
                   <span className="text-[10px] font-mono font-bold text-[#5C5852] dark:text-[#A8A29A]">
-                    {b.listingCount} Active {b.listingCount === 1 ? 'Listing' : 'Listings'}
+                    {b.listingCount} {t('brokersSection.activeListings', 'Active Listings')}
                   </span>
                   <span className="text-[11px] font-bold text-[#DF6400] flex items-center gap-1">
-                    <span>Visit Store</span>
+                    <span>{t('brokersSection.visitStore', 'Visit Store')}</span>
                     <ArrowRight className="w-3 h-3" />
                   </span>
                 </div>

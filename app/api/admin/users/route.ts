@@ -3,6 +3,7 @@ import { getSessionUser, getAllBrokers, getAllBuyers, getPlatformUsersStats } fr
 import { getAllProperties } from '@/lib/db/properties-store';
 import { getAllLeads } from '@/lib/db/leads-store';
 import { getSavedPropertyIds } from '@/lib/db/saved-store';
+import { syncWalletBalances, getAdminPlatformWalletSummary } from '@/lib/wallet/wallet-service';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
 
     const allProps = getAllProperties();
     const allLeads = getAllLeads();
+    const walletSummary = getAdminPlatformWalletSummary();
 
     const brokers = getAllBrokers().map((b) => {
       const storeCode = (b.agencyName || b.fullName).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -30,6 +32,8 @@ export async function GET(req: NextRequest) {
         return lCode === storeCode || l.brokerId === b.id;
       });
 
+      const w = syncWalletBalances(b.id);
+
       return {
         id: b.id,
         fullName: b.fullName,
@@ -37,11 +41,16 @@ export async function GET(req: NextRequest) {
         phone: b.phone,
         agencyName: b.agencyName || 'Independent Agency',
         reraNumber: b.reraNumber || 'Self-Reported',
-        operatingCity: b.operatingCity || 'India',
+        operatingCity: b.operatingCity || 'Pan India',
         isLocked: !!b.isLocked,
         createdAt: b.createdAt,
         listingsCount: brokerListings.length,
         leadsCount: brokerLeads.length,
+        wallet: {
+          totalBalance: w.paidBalance + w.freeBalance,
+          paidBalance: w.paidBalance,
+          freeBalance: w.freeBalance,
+        },
       };
     });
 
@@ -53,6 +62,7 @@ export async function GET(req: NextRequest) {
         return (uPhone && lPhone === uPhone) || (u.email && lEmail === u.email.toLowerCase());
       });
       const savedIds = getSavedPropertyIds(u.id);
+      const w = syncWalletBalances(u.id);
 
       return {
         id: u.id,
@@ -67,6 +77,11 @@ export async function GET(req: NextRequest) {
         recentActivity: userLeads[0]
           ? `Enquired: ${userLeads[0].propertyTitle} (${new Date(userLeads[0].createdAt).toLocaleDateString()})`
           : 'Active on platform',
+        wallet: {
+          totalBalance: w.paidBalance + w.freeBalance,
+          paidBalance: w.paidBalance,
+          freeBalance: w.freeBalance,
+        },
       };
     });
 
@@ -84,7 +99,14 @@ export async function GET(req: NextRequest) {
         totalListings: allProps.length,
         activeListings: allProps.filter((p) => (p.status || 'active') === 'active').length,
         pausedListings: allProps.filter((p) => p.status === 'paused').length,
+        expiredListings: allProps.filter((p) => p.status === 'expired').length,
+        soldListings: allProps.filter((p) => p.status === 'sold').length,
         totalLeads: allLeads.length,
+        totalPlatformCredits: walletSummary.totalCirculation,
+        totalPaidCredits: walletSummary.totalPaidCirculation,
+        totalFreeCredits: walletSummary.totalFreeCirculation,
+        totalRechargesVolume: walletSummary.totalRechargesVolume,
+        walletsCount: walletSummary.walletsCount,
       },
       brokers,
       buyers,

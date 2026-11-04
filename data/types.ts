@@ -93,7 +93,15 @@ export interface PropertyListing {
   
   viewsCount: number;
   leadsCount: number;
-  status?: 'active' | 'paused' | 'sold';
+  status?: 'active' | 'paused' | 'sold' | 'expired';
+  isFreeListing?: boolean;
+  freeUntil?: string;
+  listingFeePerDay?: number;
+  lastChargedAt?: string;
+  expiredAt?: string;
+  expiredReason?: string;
+  soldAt?: string;
+  priorityScore?: number;
   broker: BrokerInfo;
   createdAt: string;
 }

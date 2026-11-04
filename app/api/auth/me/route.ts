@@ -25,6 +25,8 @@ export async function GET() {
         phone: user.phone,
         role: user.role,
         agencyName: user.agencyName,
+        storeCode: user.storeCode,
+        referralCode: user.referralCode,
         reraNumber: user.reraNumber,
         operatingCity: user.operatingCity,
       },

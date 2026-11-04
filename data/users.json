@@ -12,7 +12,28 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T11:35:52.213Z",
     "createdAt": "2026-11-01T11:35:52.217Z",
-    "updatedAt": "2026-11-01T11:35:52.217Z"
+    "updatedAt": "2026-11-04T11:15:00.000Z",
+    "referralCode": "PLATF7771"
+  },
+  {
+    "id": "broker-indore-01",
+    "fullName": "Sanjay Verma",
+    "email": "sanjay@primeadvisory.in",
+    "phone": "9988776655",
+    "role": "broker",
+    "passwordHash": "d63596aa9cd2542a8d0bc37c5318b4e785ac7bfc45496d736ac297de8f344dc8cd40c09a7cd1c901cc543d091f0f14844c346352943257a60986f21a334a2fc6",
+    "passwordSalt": "355fb0cdf63948838fd8d826e2f964f1",
+    "agencyName": "Prime Advisory Indore",
+    "storeCode": "indore1001",
+    "reraNumber": "MP/RERA/IND/2021/0458",
+    "operatingCity": "Indore",
+    "experienceYears": 9,
+    "isLocked": false,
+    "dpdpConsent": true,
+    "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
+    "createdAt": "2026-11-01T10:00:00.000Z",
+    "updatedAt": "2026-11-04T11:15:00.000Z",
+    "referralCode": "INDORE1001"
   },
   {
     "id": "user-buyer-demo",
@@ -26,7 +47,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T11:35:52.217Z",
     "createdAt": "2026-11-01T11:35:52.217Z",
-    "updatedAt": "2026-11-01T11:35:52.217Z"
+    "updatedAt": "2026-11-01T11:35:52.217Z",
+    "referralCode": "RAHUL3210"
   },
   {
     "id": "broker-mumbai-01",
@@ -37,7 +59,7 @@
     "passwordHash": "d63596aa9cd2542a8d0bc37c5318b4e785ac7bfc45496d736ac297de8f344dc8cd40c09a7cd1c901cc543d091f0f14844c346352943257a60986f21a334a2fc6",
     "passwordSalt": "355fb0cdf63948838fd8d826e2f964f1",
     "agencyName": "Apex Prime Realty MMR",
-    "storeCode": "apex-prime-realty",
+    "storeCode": "apex-prime",
     "reraNumber": "A51900010482",
     "operatingCity": "Mumbai",
     "experienceYears": 16,
@@ -45,7 +67,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "APEXPRIME"
   },
   {
     "id": "broker-bangalore-02",
@@ -64,7 +87,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "DECCANPRESTIGE"
   },
   {
     "id": "broker-gurugram-03",
@@ -83,7 +107,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "CAPITALCORRIDORS"
   },
   {
     "id": "broker-pune-04",
@@ -102,7 +127,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "SAHYADRIPREMIER"
   },
   {
     "id": "broker-hyderabad-05",
@@ -121,7 +147,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "CYBERABADPRIME"
   },
   {
     "id": "broker-goa-06",
@@ -140,7 +167,8 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "GOACOASTALLIVING"
   },
   {
     "id": "broker-chennai-07",
@@ -159,6 +187,72 @@
     "dpdpConsent": true,
     "dpdpConsentDate": "2026-11-01T10:00:00.000Z",
     "createdAt": "2026-11-01T10:00:00.000Z",
-    "updatedAt": "2026-11-02T10:00:00.000Z"
+    "updatedAt": "2026-11-02T10:00:00.000Z",
+    "referralCode": "COROMANDELSPACES"
+  },
+  {
+    "id": "broker-wa-8878308624",
+    "fullName": "Adarsh",
+    "email": "broker.8878308624@whatsapp.brokersblitz.in",
+    "phone": "8878308624",
+    "role": "broker",
+    "passwordHash": "whatsapp_verified",
+    "passwordSalt": "salt",
+    "agencyName": "BrokersBlitz WhatsApp Network",
+    "storeCode": "wa-8878308624",
+    "operatingCity": "Indore",
+    "dpdpConsent": true,
+    "dpdpConsentDate": "2026-11-04T08:40:31.032Z",
+    "createdAt": "2026-11-04T08:40:31.032Z",
+    "updatedAt": "2026-11-04T11:18:20.786Z",
+    "isLocked": false,
+    "referralCode": "WA8878308624"
+  },
+  {
+    "id": "broker-wa-9988776655",
+    "fullName": "Rajesh Sharma",
+    "email": "broker.9988776655@whatsapp.brokersblitz.in",
+    "phone": "9988776655",
+    "role": "broker",
+    "passwordHash": "whatsapp_verified",
+    "passwordSalt": "salt",
+    "agencyName": "BrokersBlitz WhatsApp Network",
+    "storeCode": "wa-9988776655",
+    "operatingCity": "Indore",
+    "dpdpConsent": true,
+    "dpdpConsentDate": "2026-11-04T08:45:03.522Z",
+    "createdAt": "2026-11-04T08:45:03.522Z",
+    "updatedAt": "2026-11-04T08:45:03.522Z",
+    "referralCode": "WA9988776655"
+  },
+  {
+    "id": "user-1793800234231-zadtg6",
+    "fullName": "Test Referred Buyer",
+    "email": "referred.user.1793800234206@example.com",
+    "phone": "9700234206",
+    "role": "buyer",
+    "passwordHash": "fe97a00e34ce0cf2816517c91aa58e8bc89b4bbc004c9b193c0bcc8ea4a0fbc21ab1b0482d59b610c279f21f951c1e3cd6fc60d4259e9805c2bcf1bc79811f51",
+    "passwordSalt": "12c3746c3f5db8d984db10d893a5f9c8",
+    "referralCode": "TESTR4206",
+    "referredBy": "broker-indore-01",
+    "dpdpConsent": true,
+    "dpdpConsentDate": "2026-11-04T13:50:34.231Z",
+    "createdAt": "2026-11-04T13:50:34.231Z",
+    "updatedAt": "2026-11-04T13:50:34.231Z"
+  },
+  {
+    "id": "user-1793800258674-xhulo8",
+    "fullName": "Test Referred Buyer",
+    "email": "referred.user.1793800258650@example.com",
+    "phone": "9700258650",
+    "role": "buyer",
+    "passwordHash": "3b9462792656736e3c3445ed7d8b4126e3ff4473259fe3211bd7f00cce19518023676dc1461c47c2f49add9cfc7aa6cacf298e9dd0888c601e67db5abeb17b32",
+    "passwordSalt": "0780f64f2396a6ca97d701d535f1b4c5",
+    "referralCode": "TESTR8650",
+    "referredBy": "broker-indore-01",
+    "dpdpConsent": true,
+    "dpdpConsentDate": "2026-11-04T13:50:58.674Z",
+    "createdAt": "2026-11-04T13:50:58.674Z",
+    "updatedAt": "2026-11-04T13:50:58.674Z"
   }
 ]
