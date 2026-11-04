@@ -1,10 +1,9 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { findUserById, eraseUserPersonalData } from '../auth/user-store';
 import { getPropertiesByBroker, getAllProperties } from '../db/properties-store';
 import { getWalletStatement } from '../wallet/wallet-service';
 import { getAllReferrals } from '../referral/referral-service';
+import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 export interface ComplianceAuditLog {
   id: string;
@@ -16,28 +15,14 @@ export interface ComplianceAuditLog {
   details: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const AUDIT_FILE = path.join(DATA_DIR, 'compliance_audit.json');
-
-function ensureAuditFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(AUDIT_FILE)) {
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
-
 function logComplianceAction(
   userId: string,
   action: 'DATA_EXPORT' | 'CONSENT_WITHDRAWAL' | 'DATA_ERASURE',
   details: string
 ) {
-  ensureAuditFile();
   const userIdHash = crypto.createHash('sha256').update(userId).digest('hex').slice(0, 16);
   try {
-    const raw = fs.readFileSync(AUDIT_FILE, 'utf-8');
-    const logs: ComplianceAuditLog[] = JSON.parse(raw);
+    const logs = readJsonFile<ComplianceAuditLog[]>('compliance_audit.json', []);
     logs.unshift({
       id: `audit-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
       userIdHash,
@@ -47,7 +32,7 @@ function logComplianceAction(
       timestamp: new Date().toISOString(),
       details,
     });
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+    writeJsonFile('compliance_audit.json', logs);
   } catch {}
 }
 

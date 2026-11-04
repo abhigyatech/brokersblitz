@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { readJsonFile, writeJsonFile } from './json-store';
 
 interface SavedEntry {
   userId: string;
@@ -7,31 +6,12 @@ interface SavedEntry {
   updatedAt: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SAVED_FILE = path.join(DATA_DIR, 'saved.json');
-
-function ensureSavedFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(SAVED_FILE)) {
-    fs.writeFileSync(SAVED_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
-
 function loadSaved(): SavedEntry[] {
-  ensureSavedFile();
-  try {
-    const raw = fs.readFileSync(SAVED_FILE, 'utf-8');
-    return JSON.parse(raw) as SavedEntry[];
-  } catch {
-    return [];
-  }
+  return readJsonFile<SavedEntry[]>('saved.json', []);
 }
 
 function persistSaved(entries: SavedEntry[]): void {
-  ensureSavedFile();
-  fs.writeFileSync(SAVED_FILE, JSON.stringify(entries, null, 2), 'utf-8');
+  writeJsonFile('saved.json', entries);
 }
 
 export function getSavedPropertyIds(userId: string): string[] {

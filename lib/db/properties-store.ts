@@ -1,31 +1,13 @@
-import fs from 'fs';
-import path from 'path';
 import { PropertyListing } from '../../data/types';
 import { StoredUser } from '../auth/user-store';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const PROPERTIES_FILE = path.join(DATA_DIR, 'properties.json');
-
-function ensurePropertiesFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
+import { readJsonFile, writeJsonFile } from './json-store';
 
 export function getAllProperties(): PropertyListing[] {
-  ensurePropertiesFile();
-  try {
-    if (!fs.existsSync(PROPERTIES_FILE)) return [];
-    const content = fs.readFileSync(PROPERTIES_FILE, 'utf-8');
-    return JSON.parse(content) as PropertyListing[];
-  } catch {
-    return [];
-  }
+  return readJsonFile<PropertyListing[]>('properties.json', []);
 }
 
 export function saveProperties(properties: PropertyListing[]): void {
-  ensurePropertiesFile();
-  fs.writeFileSync(PROPERTIES_FILE, JSON.stringify(properties, null, 2), 'utf-8');
+  writeJsonFile('properties.json', properties);
 }
 
 export function getPropertyById(id: string): PropertyListing | null {

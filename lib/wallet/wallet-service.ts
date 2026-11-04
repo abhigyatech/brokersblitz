@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { readJsonFile as readJsonFileStore, writeJsonFile as writeJsonFileStore } from '../db/json-store';
 
 export type UserWalletStatus = 'active' | 'frozen' | 'suspended';
 
@@ -89,20 +90,7 @@ export function withWalletLock<T>(brokerId: string, fn: () => Promise<T>): Promi
   return nextLock;
 }
 
-function ensureWalletFiles() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(WALLETS_FILE)) {
-    fs.writeFileSync(WALLETS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-  if (!fs.existsSync(GRANTS_FILE)) {
-    fs.writeFileSync(GRANTS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-  if (!fs.existsSync(LEDGER_FILE)) {
-    fs.writeFileSync(LEDGER_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
+function ensureWalletFiles() {}
 
 function computeChecksum(data: {
   id: string;
@@ -137,20 +125,13 @@ function generateReferenceId(type: TransactionType): string {
 }
 
 function readJsonFile<T>(filePath: string): T {
-  ensureWalletFiles();
-  try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(raw) as T;
-  } catch {
-    return [] as unknown as T;
-  }
+  const baseName = path.basename(filePath);
+  return readJsonFileStore<T>(baseName, [] as unknown as T);
 }
 
 function safeWriteJsonFile<T>(filePath: string, data: T): void {
-  ensureWalletFiles();
-  const tempPath = `${filePath}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tempPath, filePath);
+  const baseName = path.basename(filePath);
+  writeJsonFileStore(baseName, data);
 }
 
 export function verifyTransactionIntegrity(txn: WalletTransaction, prevTxn?: WalletTransaction): boolean {

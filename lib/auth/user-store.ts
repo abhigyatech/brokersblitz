@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { hashPassword, generateSessionToken } from './crypto';
+import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 export type UserRole = 'buyer' | 'broker' | 'admin';
 
@@ -33,68 +35,83 @@ export interface ActiveSession {
   expiresAt: number;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+const SESSION_SECRET = process.env.SESSION_SECRET || 'brokersblitz_secret_session_key_2026';
 
-function ensureDataFiles() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
+const DEFAULT_PASS_HASH = 'd63596aa9cd2542a8d0bc37c5318b4e785ac7bfc45496d736ac297de8f344dc8cd40c09a7cd1c901cc543d091f0f14844c346352943257a60986f21a334a2fc6';
+const DEFAULT_PASS_SALT = '355fb0cdf63948838fd8d826e2f964f1';
 
-  if (!fs.existsSync(USERS_FILE)) {
-    const defaultPass = hashPassword('BrokersBlitz@2026');
-    const defaultUsers: StoredUser[] = [
-      {
-        id: 'user-admin-01',
-        fullName: 'Platform Operations Admin',
-        email: 'admin@brokersblitz.in',
-        phone: '7272357771',
-        role: 'admin',
-        passwordHash: defaultPass.hash,
-        passwordSalt: defaultPass.salt,
-        agencyName: 'BrokersBlitz Headquarters',
-        dpdpConsent: true,
-        dpdpConsentDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'user-broker-demo',
-        fullName: 'Rajesh Mehta',
-        email: 'broker@apexrealty.in',
-        phone: '9820144520',
-        role: 'broker',
-        passwordHash: defaultPass.hash,
-        passwordSalt: defaultPass.salt,
-        agencyName: 'Apex Prime Realty MMR',
-        reraNumber: 'A51900010482',
-        operatingCity: 'Mumbai',
-        dpdpConsent: true,
-        dpdpConsentDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'user-buyer-demo',
-        fullName: 'Rahul Sharma',
-        email: 'buyer@investors.in',
-        phone: '9876543210',
-        role: 'buyer',
-        passwordHash: defaultPass.hash,
-        passwordSalt: defaultPass.salt,
-        dpdpConsent: true,
-        dpdpConsentDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-    fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf-8');
-  }
-
-  if (!fs.existsSync(SESSIONS_FILE)) {
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
+function getDefaultSeedUsers(): StoredUser[] {
+  return [
+    {
+      id: 'user-admin-01',
+      fullName: 'Platform Operations Admin',
+      email: 'admin@brokersblitz.in',
+      phone: '7272357771',
+      role: 'admin',
+      passwordHash: DEFAULT_PASS_HASH,
+      passwordSalt: DEFAULT_PASS_SALT,
+      agencyName: 'BrokersBlitz Headquarters',
+      referralCode: 'PLATF7771',
+      dpdpConsent: true,
+      dpdpConsentDate: '2026-11-01T11:35:52.213Z',
+      createdAt: '2026-11-01T11:35:52.217Z',
+      updatedAt: '2026-11-04T11:15:00.000Z',
+    },
+    {
+      id: 'broker-indore-01',
+      fullName: 'Sanjay Verma',
+      email: 'sanjay@primeadvisory.in',
+      phone: '9988776655',
+      role: 'broker',
+      passwordHash: DEFAULT_PASS_HASH,
+      passwordSalt: DEFAULT_PASS_SALT,
+      agencyName: 'Prime Advisory Indore',
+      storeCode: 'indore1001',
+      referralCode: 'INDORE1001',
+      reraNumber: 'MP/RERA/IND/2021/0458',
+      operatingCity: 'Indore',
+      experienceYears: 9,
+      isLocked: false,
+      dpdpConsent: true,
+      dpdpConsentDate: '2026-11-01T10:00:00.000Z',
+      createdAt: '2026-11-01T10:00:00.000Z',
+      updatedAt: '2026-11-04T11:15:00.000Z',
+    },
+    {
+      id: 'broker-mumbai-01',
+      fullName: 'Rajesh Mehta',
+      email: 'rajesh@apexprime.in',
+      phone: '9820144520',
+      role: 'broker',
+      passwordHash: DEFAULT_PASS_HASH,
+      passwordSalt: DEFAULT_PASS_SALT,
+      agencyName: 'Apex Prime Realty MMR',
+      storeCode: 'apex-prime',
+      referralCode: 'APEXPRIME',
+      reraNumber: 'A51900010482',
+      operatingCity: 'Mumbai',
+      experienceYears: 16,
+      isLocked: false,
+      dpdpConsent: true,
+      dpdpConsentDate: '2026-11-01T10:00:00.000Z',
+      createdAt: '2026-11-01T10:00:00.000Z',
+      updatedAt: '2026-11-02T10:00:00.000Z',
+    },
+    {
+      id: 'user-buyer-demo',
+      fullName: 'Rahul Sharma',
+      email: 'buyer@investors.in',
+      phone: '9876543210',
+      role: 'buyer',
+      passwordHash: DEFAULT_PASS_HASH,
+      passwordSalt: DEFAULT_PASS_SALT,
+      referralCode: 'RAHUL3210',
+      dpdpConsent: true,
+      dpdpConsentDate: '2026-11-01T11:35:52.217Z',
+      createdAt: '2026-11-01T11:35:52.217Z',
+      updatedAt: '2026-11-01T11:35:52.217Z',
+    },
+  ];
 }
 
 export function generateUserReferralCode(user: { fullName: string; storeCode?: string; phone?: string; id?: string }): string {
@@ -102,15 +119,14 @@ export function generateUserReferralCode(user: { fullName: string; storeCode?: s
     return user.storeCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   }
   const namePart = user.fullName.replace(/[^a-zA-Z]/g, '').slice(0, 5).toUpperCase() || 'REF';
-  const phonePart = user.phone ? user.phone.replace(/[^0-9]/g, '').slice(-4) : (user.id || Math.random().toString(36)).slice(-4).toUpperCase();
-  return `${namePart}${phonePart}`;
+  const cleanId = (user.id || '0000').replace(/[^a-zA-Z0-9]/g, '');
+  const phonePart = user.phone ? user.phone.replace(/[^0-9]/g, '').slice(-4) : cleanId.slice(-4).toUpperCase();
+  return `${namePart}${phonePart.padEnd(4, '0')}`;
 }
 
 export function getAllUsers(): StoredUser[] {
-  ensureDataFiles();
   try {
-    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-    const users: StoredUser[] = JSON.parse(raw);
+    const users = readJsonFile<StoredUser[]>('users.json', getDefaultSeedUsers());
     let modified = false;
     for (const u of users) {
       if (!u.referralCode) {
@@ -123,13 +139,12 @@ export function getAllUsers(): StoredUser[] {
     }
     return users;
   } catch {
-    return [];
+    return getDefaultSeedUsers();
   }
 }
 
 export function saveUsers(users: StoredUser[]) {
-  ensureDataFiles();
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  writeJsonFile('users.json', users);
 }
 
 export function findUserByEmail(email: string): StoredUser | undefined {
@@ -275,28 +290,43 @@ export function createAdminUser(
 }
 
 export function createSession(userId: string): string {
-  ensureDataFiles();
-  const token = generateSessionToken();
   const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(`${userId}:${expiresAt}`).digest('hex');
+  const token = `bbs.${userId}.${expiresAt}.${signature}`;
 
   try {
-    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
-    const sessions: ActiveSession[] = JSON.parse(raw);
+    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
     const validSessions = sessions.filter((s) => s.expiresAt > Date.now());
     validSessions.push({ token, userId, expiresAt });
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(validSessions, null, 2), 'utf-8');
-  } catch {
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify([{ token, userId, expiresAt }], null, 2), 'utf-8');
-  }
+    writeJsonFile('sessions.json', validSessions);
+  } catch {}
 
   return token;
 }
 
 export function verifySession(token: string): StoredUser | null {
-  ensureDataFiles();
+  if (!token) return null;
+
+  if (token.startsWith('bbs.')) {
+    const parts = token.split('.');
+    if (parts.length === 4) {
+      const [, userId, expiresAtStr, signature] = parts;
+      const expiresAt = parseInt(expiresAtStr, 10);
+      if (!isNaN(expiresAt) && expiresAt > Date.now()) {
+        const expected = crypto.createHmac('sha256', SESSION_SECRET).update(`${userId}:${expiresAt}`).digest('hex');
+        if (expected === signature) {
+          const user = findUserById(userId);
+          if (user && !user.isLocked) {
+            return user;
+          }
+        }
+      }
+      return null;
+    }
+  }
+
   try {
-    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
-    const sessions: ActiveSession[] = JSON.parse(raw);
+    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
     const session = sessions.find((s) => s.token === token && s.expiresAt > Date.now());
     if (!session) return null;
     const user = findUserById(session.userId);
@@ -309,22 +339,18 @@ export function verifySession(token: string): StoredUser | null {
 export const getSessionUser = verifySession;
 
 export function deleteSession(token: string) {
-  ensureDataFiles();
   try {
-    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
-    const sessions: ActiveSession[] = JSON.parse(raw);
+    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
     const filtered = sessions.filter((s) => s.token !== token);
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    writeJsonFile('sessions.json', filtered);
   } catch {}
 }
 
 export function deleteAllUserSessions(userId: string) {
-  ensureDataFiles();
   try {
-    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
-    const sessions: ActiveSession[] = JSON.parse(raw);
+    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
     const filtered = sessions.filter((s) => s.userId !== userId);
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+    writeJsonFile('sessions.json', filtered);
   } catch {}
 }
 

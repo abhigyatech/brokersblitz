@@ -77,9 +77,10 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
+  } catch (err: any) {
+    console.error('[Login Error]:', err);
     return NextResponse.json(
-      { error: 'Internal server error while logging in.' },
+      { error: err?.message || 'Internal server error while logging in.' },
       { status: 500 }
     );
   }

@@ -1,6 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 interface StoredOtp {
   target: string;
@@ -10,23 +8,9 @@ interface StoredOtp {
   attempts: number;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const OTPS_FILE = path.join(DATA_DIR, 'otps.json');
-
-function ensureOtpFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(OTPS_FILE)) {
-    fs.writeFileSync(OTPS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
-
 function loadOtps(): StoredOtp[] {
-  ensureOtpFile();
   try {
-    const raw = fs.readFileSync(OTPS_FILE, 'utf-8');
-    const otps: StoredOtp[] = JSON.parse(raw);
+    const otps = readJsonFile<StoredOtp[]>('otps.json', []);
     return otps.filter((o) => o.expiresAt > Date.now());
   } catch {
     return [];
@@ -34,8 +18,7 @@ function loadOtps(): StoredOtp[] {
 }
 
 function saveOtps(otps: StoredOtp[]) {
-  ensureOtpFile();
-  fs.writeFileSync(OTPS_FILE, JSON.stringify(otps, null, 2), 'utf-8');
+  writeJsonFile('otps.json', otps);
 }
 
 export async function sendOtp(target: string, type: 'email' | 'whatsapp'): Promise<{ success: boolean; message: string; sampleOtp?: string }> {

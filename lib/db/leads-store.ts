@@ -1,32 +1,12 @@
-import fs from 'fs';
-import path from 'path';
 import { Lead } from '../../data/types';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
-
-function ensureLeadsFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(LEADS_FILE)) {
-    fs.writeFileSync(LEADS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
+import { readJsonFile, writeJsonFile } from './json-store';
 
 export function getAllLeads(): Lead[] {
-  ensureLeadsFile();
-  try {
-    const raw = fs.readFileSync(LEADS_FILE, 'utf-8');
-    return JSON.parse(raw) as Lead[];
-  } catch {
-    return [];
-  }
+  return readJsonFile<Lead[]>('leads.json', []);
 }
 
 export function saveLeads(leads: Lead[]): void {
-  ensureLeadsFile();
-  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2), 'utf-8');
+  writeJsonFile('leads.json', leads);
 }
 
 export function getLeadsByBroker(storeCodeOrId: string): Lead[] {

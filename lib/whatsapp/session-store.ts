@@ -1,35 +1,13 @@
-import fs from 'fs';
-import path from 'path';
 import { WhatsAppUserSession, DraftListingData, ListingStep, BuyerSearchPreferences } from './types';
 import { findUserByPhone } from '../auth/user-store';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SESSIONS_FILE = path.join(DATA_DIR, 'whatsapp_sessions.json');
-
-function ensureSessionFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(SESSIONS_FILE)) {
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify({}, null, 2), 'utf-8');
-  }
-}
+import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 function readSessions(): Record<string, WhatsAppUserSession> {
-  ensureSessionFile();
-  try {
-    const raw = fs.readFileSync(SESSIONS_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+  return readJsonFile<Record<string, WhatsAppUserSession>>('whatsapp_sessions.json', {});
 }
 
 function writeSessions(sessions: Record<string, WhatsAppUserSession>): void {
-  ensureSessionFile();
-  const temp = `${SESSIONS_FILE}.${Date.now()}.tmp`;
-  fs.writeFileSync(temp, JSON.stringify(sessions, null, 2), 'utf-8');
-  fs.renameSync(temp, SESSIONS_FILE);
+  writeJsonFile('whatsapp_sessions.json', sessions);
 }
 
 export function getOrCreateSession(phone: string, userName?: string): WhatsAppUserSession {

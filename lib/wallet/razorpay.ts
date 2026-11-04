@@ -1,6 +1,5 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 export interface RechargePack {
   id: string;
@@ -67,40 +66,22 @@ export const RECHARGE_PACKS: RechargePack[] = [
   },
 ];
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const ORDERS_FILE = path.join(DATA_DIR, 'wallet_orders.json');
-
-function ensureOrdersFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(ORDERS_FILE)) {
-    fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
-
 export function saveRechargeOrder(order: StoredRechargeOrder): void {
-  ensureOrdersFile();
   try {
-    const raw = fs.readFileSync(ORDERS_FILE, 'utf-8');
-    const orders: StoredRechargeOrder[] = JSON.parse(raw);
+    const orders = readJsonFile<StoredRechargeOrder[]>('wallet_orders.json', []);
     const idx = orders.findIndex((o) => o.orderId === order.orderId);
     if (idx >= 0) {
       orders[idx] = order;
     } else {
       orders.push(order);
     }
-    const temp = `${ORDERS_FILE}.${Date.now()}.tmp`;
-    fs.writeFileSync(temp, JSON.stringify(orders, null, 2), 'utf-8');
-    fs.renameSync(temp, ORDERS_FILE);
+    writeJsonFile('wallet_orders.json', orders);
   } catch {}
 }
 
 export function getRechargeOrder(orderId: string): StoredRechargeOrder | undefined {
-  ensureOrdersFile();
   try {
-    const raw = fs.readFileSync(ORDERS_FILE, 'utf-8');
-    const orders: StoredRechargeOrder[] = JSON.parse(raw);
+    const orders = readJsonFile<StoredRechargeOrder[]>('wallet_orders.json', []);
     return orders.find((o) => o.orderId === orderId);
   } catch {
     return undefined;

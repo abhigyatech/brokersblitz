@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { readJsonFile as readJsonFileStore, writeJsonFile as writeJsonFileStore } from '../db/json-store';
 import { getAllUsers, saveUsers, findUserById, StoredUser } from '../auth/user-store';
 import { grantFreeCredits } from '../wallet/wallet-service';
 
@@ -43,34 +44,16 @@ const DEFAULT_CONFIG: ReferralConfig = {
   updatedBy: 'admin@brokersblitz.in',
 };
 
-function ensureReferralFiles() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(CONFIG_FILE)) {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-  }
-
-  if (!fs.existsSync(REFERRALS_FILE)) {
-    fs.writeFileSync(REFERRALS_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
-}
+function ensureReferralFiles() {}
 
 function safeReadJson<T>(filePath: string, fallback: T): T {
-  try {
-    if (!fs.existsSync(filePath)) return fallback;
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
+  const baseName = path.basename(filePath);
+  return readJsonFileStore<T>(baseName, fallback);
 }
 
 function safeWriteJson<T>(filePath: string, data: T): void {
-  const tmpFile = `${filePath}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, filePath);
+  const baseName = path.basename(filePath);
+  writeJsonFileStore(baseName, data);
 }
 
 export function getReferralConfig(): ReferralConfig {
