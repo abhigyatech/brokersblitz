@@ -6,10 +6,12 @@ import { getSessionUser } from '@/lib/auth/user-store';
 export async function GET(req: NextRequest) {
   try {
     const sessionToken = req.cookies.get('bb_session')?.value;
-    const user = sessionToken ? getSessionUser(sessionToken) : null;
+    const user = sessionToken ? await getSessionUser(sessionToken) : null;
 
-    const properties = getAllProperties();
-    const leads = getAllLeads();
+    const [properties, leads] = await Promise.all([
+      getAllProperties(),
+      getAllLeads(),
+    ]);
 
     let brokerProperties = properties;
     let brokerLeads = leads;
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
         const name = p.broker.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         return code === brokerNorm || name === brokerNorm;
       });
-      brokerLeads = getLeadsByBroker(brokerNorm);
+      brokerLeads = await getLeadsByBroker(brokerNorm);
     }
 
     const activeListings = brokerProperties.filter((p) => p.status !== 'paused' && p.status !== 'sold');
@@ -43,4 +45,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

@@ -49,7 +49,8 @@ async function handleSuggestions(query: string, preferredCity?: string) {
   }
 
   const qLower = query.toLowerCase();
-  const allBrokers = getAllBrokers().filter((b) => !b.isLocked);
+  const rawBrokers = await getAllBrokers();
+  const allBrokers = rawBrokers.filter((b) => !b.isLocked);
   const scoredBrokers = allBrokers.map((b) => {
     let score = 0;
     const agencyLower = (b.agencyName || '').toLowerCase();
@@ -89,11 +90,12 @@ async function handleSuggestions(query: string, preferredCity?: string) {
       city: sb.broker.operatingCity || 'Pan India',
       reraNumber: sb.broker.reraNumber || 'Self-Reported',
       experienceYears: sb.broker.experienceYears || 10,
-      avatar: sb.broker.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80',
+      avatar: sb.broker.avatar || '',
       url: `/broker/${sb.broker.storeCode || sb.broker.id}`,
     }));
 
-  const allProperties = getAllProperties().filter((p) => p.status !== 'paused' && p.status !== 'sold');
+  const rawProps = await getAllProperties();
+  const allProperties = rawProps.filter((p) => p.status !== 'paused' && p.status !== 'sold');
   const scoredProps = allProperties.map((p) => {
     let score = 0;
     const titleLower = p.title.toLowerCase();
@@ -208,4 +210,3 @@ async function handleSuggestions(query: string, preferredCity?: string) {
     parsed,
   });
 }
-

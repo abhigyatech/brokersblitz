@@ -14,12 +14,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden. Administrator access required.' }, { status: 403 });
     }
 
-    const data = getAdminReferralOverview();
+    const data = await getAdminReferralOverview();
     return NextResponse.json({ success: true, ...data });
   } catch {
     return NextResponse.json({ error: 'Internal server error fetching referral overview.' }, { status: 500 });
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden. Administrator access required.' }, { status: 403 });
     }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { referrerRewardCredits, refereeRewardCredits, expiryDays, isEnabled } = body;
 
-    const updatedConfig = updateReferralConfig(
+    const updatedConfig = await updateReferralConfig(
       {
         referrerRewardCredits,
         refereeRewardCredits,
@@ -61,4 +61,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal server error updating referral config.' }, { status: 500 });
   }
 }
-

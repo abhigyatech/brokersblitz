@@ -15,7 +15,6 @@ import {
   ArrowUpDown,
   Sparkles,
 } from 'lucide-react';
-import initialPropertiesData from '../../data/properties.json';
 import { PropertyListing, UserRole } from '../../data/types';
 import { INDIAN_METROS, PROPERTY_TYPES, BUDGET_RANGES, BHK_OPTIONS } from '../../data/cities';
 import Navbar from '../../components/Navbar';
@@ -29,7 +28,7 @@ export default function SearchClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [properties, setProperties] = useState<PropertyListing[]>(initialPropertiesData as PropertyListing[]);
+  const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [currentUser, setCurrentUser] = useState<{
     name: string;
     role: UserRole;
@@ -80,7 +79,7 @@ export default function SearchClient() {
     fetch('/api/properties')
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.properties) && data.properties.length > 0) {
+        if (data.success && Array.isArray(data.properties)) {
           setProperties(data.properties);
         }
       })

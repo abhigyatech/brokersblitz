@@ -15,9 +15,9 @@ export async function POST(request: Request) {
     }
 
     const trimmed = identifier.trim();
-    let user = findUserByEmail(trimmed);
+    let user = await findUserByEmail(trimmed);
     if (!user) {
-      user = findUserByPhone(trimmed);
+      user = await findUserByPhone(trimmed);
     }
 
     if (!user) {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const sessionToken = createSession(user.id);
+    const sessionToken = await createSession(user.id);
 
     const safeUser = {
       id: user.id,
@@ -78,11 +78,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (err: any) {
-    console.error('[Login Error]:', err);
     return NextResponse.json(
       { error: err?.message || 'Internal server error while logging in.' },
       { status: 500 }
     );
   }
 }
-

@@ -1,9 +1,9 @@
 import crypto from 'crypto';
+import { query } from '../db/postgres';
 import { findUserById, eraseUserPersonalData } from '../auth/user-store';
-import { getPropertiesByBroker, getAllProperties } from '../db/properties-store';
+import { getPropertiesByBroker } from '../db/properties-store';
 import { getWalletStatement } from '../wallet/wallet-service';
 import { getAllReferrals } from '../referral/referral-service';
-import { readJsonFile, writeJsonFile } from '../db/json-store';
 
 export interface ComplianceAuditLog {
   id: string;
@@ -15,40 +15,36 @@ export interface ComplianceAuditLog {
   details: string;
 }
 
-function logComplianceAction(
+async function logComplianceAction(
   userId: string,
   action: 'DATA_EXPORT' | 'CONSENT_WITHDRAWAL' | 'DATA_ERASURE',
   details: string
-) {
+): Promise<void> {
   const userIdHash = crypto.createHash('sha256').update(userId).digest('hex').slice(0, 16);
+  const auditId = `audit-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
   try {
-    const logs = readJsonFile<ComplianceAuditLog[]>('compliance_audit.json', []);
-    logs.unshift({
-      id: `audit-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
-      userIdHash,
-      action,
-      regulation: 'DPDP_ACT_2023_INDIA',
-      status: 'COMPLETED',
-      timestamp: new Date().toISOString(),
-      details,
-    });
-    writeJsonFile('compliance_audit.json', logs);
+    await query(
+      `INSERT INTO public.compliance_audit_logs (
+        id, user_id_hash, action, regulation, status, timestamp, details
+      ) VALUES ($1, $2, $3, 'DPDP_ACT_2023_INDIA', 'COMPLETED', now(), $4)`,
+      [auditId, userIdHash, action, details]
+    );
   } catch {}
 }
 
-export function generateDataPrincipalExport(userId: string): {
+export async function generateDataPrincipalExport(userId: string): Promise<{
   success: boolean;
   error?: string;
   data?: any;
-} {
-  const user = findUserById(userId);
+}> {
+  const user = await findUserById(userId);
   if (!user) {
     return { success: false, error: 'User profile not found.' };
   }
 
-  const userProperties = getPropertiesByBroker(userId);
-  const walletStatement = getWalletStatement(userId);
-  const allReferrals = getAllReferrals();
+  const userProperties = await getPropertiesByBroker(userId);
+  const walletStatement = await getWalletStatement(userId);
+  const allReferrals = await getAllReferrals();
   const userReferrals = allReferrals.filter(
     (r) => r.referrerId === userId || r.refereeId === userId
   );
@@ -88,7 +84,7 @@ export function generateDataPrincipalExport(userId: string): {
       currentBalance: walletStatement.wallet.totalBalance,
       paidBalance: walletStatement.wallet.paidBalance,
       promotionalBonusBalance: walletStatement.wallet.freeBalance,
-      transactions: walletStatement.transactions.map((t) => ({
+      transactions: walletStatement.ledger.map((t) => ({
         referenceId: t.referenceId,
         type: t.type,
         amount: t.amount,
@@ -96,7 +92,7 @@ export function generateDataPrincipalExport(userId: string): {
         description: t.description,
         timestamp: t.createdAt,
       })),
-      activePromotionalGrants: walletStatement.grants.map((g) => ({
+      activePromotionalGrants: walletStatement.activeGrants.map((g) => ({
         grantId: g.id,
         initialAmount: g.initialAmount,
         remainingAmount: g.remainingAmount,
@@ -116,16 +112,16 @@ export function generateDataPrincipalExport(userId: string): {
     },
   };
 
-  logComplianceAction(userId, 'DATA_EXPORT', 'Data Principal downloaded full personal data archive');
+  await logComplianceAction(userId, 'DATA_EXPORT', 'Data Principal downloaded full personal data archive');
 
   return { success: true, data: exportPayload };
 }
 
-export function executeDataPrincipalErasure(userId: string): {
+export async function executeDataPrincipalErasure(userId: string): Promise<{
   success: boolean;
   error?: string;
-} {
-  const user = findUserById(userId);
+}> {
+  const user = await findUserById(userId);
   if (!user) {
     return { success: false, error: 'User profile not found.' };
   }
@@ -134,12 +130,12 @@ export function executeDataPrincipalErasure(userId: string): {
     return { success: false, error: 'Administrator accounts cannot be erased via self-service.' };
   }
 
-  const res = eraseUserPersonalData(userId);
+  const res = await eraseUserPersonalData(userId);
   if (!res.success) {
     return res;
   }
 
-  logComplianceAction(
+  await logComplianceAction(
     userId,
     'DATA_ERASURE',
     'Personal data erased in accordance with Section 12 of the DPDP Act 2023 and GDPR Article 17'

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user || (user.role !== 'broker' && user.role !== 'admin')) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const storedOrder = getRechargeOrder(razorpay_order_id);
+    const storedOrder = await getRechargeOrder(razorpay_order_id);
 
     let pack = RECHARGE_PACKS.find((p) => p.id === (storedOrder?.packId || packId));
     let paidCredits = storedOrder ? storedOrder.paidCredits : pack ? pack.paidCredits : 500;
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     if (storedOrder) {
       storedOrder.status = 'verified';
       storedOrder.updatedAt = new Date().toISOString();
-      saveRechargeOrder(storedOrder);
+      await saveRechargeOrder(storedOrder);
     }
 
     const result = await creditPaidBalance(user.id, paidCredits, {
@@ -86,4 +86,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Payment verification failed' }, { status: 500 });
   }
 }
-

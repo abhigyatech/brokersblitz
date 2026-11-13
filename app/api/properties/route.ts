@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const broker = searchParams.get('broker') || undefined;
     const reraOnly = searchParams.get('reraOnly') === 'true';
 
-    let results = searchProperties({
+    let results = await searchProperties({
       city,
       purpose,
       category,
@@ -38,9 +38,9 @@ export async function GET(req: NextRequest) {
 
     if (broker) {
       const bNorm = broker.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const allBrokers = getAllBrokers();
+      const allBrokers = await getAllBrokers();
       const matched = allBrokers.find((b) => {
-        const uCode = (b.agencyName || b.fullName).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const uCode = (b.storeCode || b.agencyName || b.fullName).toLowerCase().replace(/[^a-z0-9]/g, '');
         return uCode === bNorm || b.id.toLowerCase() === bNorm;
       });
       if (matched) {
@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
           city: matched.operatingCity || 'India',
           reraNumber: matched.reraNumber || 'Self-Reported',
           isLocked: isBrokerLocked,
+          storeCode: matched.storeCode || (matched.agencyName || matched.fullName).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         };
       }
 
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionToken);
+    const user = await getSessionUser(sessionToken);
     if (!user) {
       return NextResponse.json({ success: false, error: 'Session expired. Please log in again.' }, { status: 401 });
     }
@@ -110,14 +111,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required property details (title, city, price)' }, { status: 400 });
     }
 
-    const created = createProperty(body, user);
+    const created = await createProperty(body, user);
     const finalized = await processListingOnCreation(created, user.id);
 
-    const allProps = getAllProperties();
+    const allProps = await getAllProperties();
     const fIdx = allProps.findIndex((p) => p.id === finalized.id);
     if (fIdx >= 0) {
       allProps[fIdx] = finalized;
-      saveProperties(allProps);
+      await saveProperties(allProps);
     }
 
     return NextResponse.json(
@@ -139,4 +140,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

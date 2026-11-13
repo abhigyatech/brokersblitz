@@ -1,30 +1,32 @@
 import { WhatsAppUserSession, DraftListingData, ListingStep, BuyerSearchPreferences } from './types';
 import { findUserByPhone } from '../auth/user-store';
-import { readJsonFile, writeJsonFile } from '../db/json-store';
+import { query } from '../db/postgres';
 
-function readSessions(): Record<string, WhatsAppUserSession> {
-  return readJsonFile<Record<string, WhatsAppUserSession>>('whatsapp_sessions.json', {});
-}
-
-function writeSessions(sessions: Record<string, WhatsAppUserSession>): void {
-  writeJsonFile('whatsapp_sessions.json', sessions);
-}
-
-export function getOrCreateSession(phone: string, userName?: string): WhatsAppUserSession {
+export async function getOrCreateSession(phone: string, userName?: string): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
 
-  if (sessions[cleanPhone]) {
-    const lastActiveTime = sessions[cleanPhone].lastActive ? new Date(sessions[cleanPhone].lastActive).getTime() : 0;
-    if (Date.now() - lastActiveTime > 2 * 60 * 60 * 1000) {
-      sessions[cleanPhone].currentStep = 'idle';
+  try {
+    const res = await query(
+      `SELECT data FROM public.whatsapp_sessions WHERE phone = $1 LIMIT 1`,
+      [cleanPhone]
+    );
+
+    if (res.rows.length > 0) {
+      const session = res.rows[0].data as WhatsAppUserSession;
+      const lastActiveTime = session.lastActive ? new Date(session.lastActive).getTime() : 0;
+      if (Date.now() - lastActiveTime > 2 * 60 * 60 * 1000) {
+        session.currentStep = 'idle';
+      }
+      session.lastActive = new Date().toISOString();
+      await query(
+        `UPDATE public.whatsapp_sessions SET data = $1::jsonb, updated_at = now() WHERE phone = $2`,
+        [JSON.stringify(session), cleanPhone]
+      );
+      return session;
     }
-    sessions[cleanPhone].lastActive = new Date().toISOString();
-    writeSessions(sessions);
-    return sessions[cleanPhone];
-  }
+  } catch {}
 
-  const existingUser = findUserByPhone(cleanPhone);
+  const existingUser = await findUserByPhone(cleanPhone);
   const isBroker = existingUser?.role === 'broker';
 
   const newSession: WhatsAppUserSession = {
@@ -38,18 +40,24 @@ export function getOrCreateSession(phone: string, userName?: string): WhatsAppUs
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = newSession;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(newSession)]
+    );
+  } catch {}
+
   return newSession;
 }
 
-export function updateSession(
+export async function updateSession(
   phone: string,
   updates: Partial<WhatsAppUserSession>
-): WhatsAppUserSession {
+): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
-  const current = sessions[cleanPhone] || getOrCreateSession(phone);
+  const current = await getOrCreateSession(phone);
 
   const merged: WhatsAppUserSession = {
     ...current,
@@ -57,22 +65,28 @@ export function updateSession(
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = merged;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(merged)]
+    );
+  } catch {}
+
   return merged;
 }
 
-export function setSessionStep(phone: string, step: ListingStep): WhatsAppUserSession {
+export async function setSessionStep(phone: string, step: ListingStep): Promise<WhatsAppUserSession> {
   return updateSession(phone, { currentStep: step });
 }
 
-export function updateDraftListing(
+export async function updateDraftListing(
   phone: string,
   data: Partial<DraftListingData>
-): WhatsAppUserSession {
+): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
-  const current = sessions[cleanPhone] || getOrCreateSession(phone);
+  const current = await getOrCreateSession(phone);
 
   const existingDraft = current.draftListing || {};
   const updatedDraft: DraftListingData = {
@@ -86,15 +100,21 @@ export function updateDraftListing(
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = merged;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(merged)]
+    );
+  } catch {}
+
   return merged;
 }
 
-export function resetDraftListing(phone: string): WhatsAppUserSession {
+export async function resetDraftListing(phone: string): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
-  const current = sessions[cleanPhone] || getOrCreateSession(phone);
+  const current = await getOrCreateSession(phone);
 
   const merged: WhatsAppUserSession = {
     ...current,
@@ -104,18 +124,24 @@ export function resetDraftListing(phone: string): WhatsAppUserSession {
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = merged;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(merged)]
+    );
+  } catch {}
+
   return merged;
 }
 
-export function updateBuyerPreferences(
+export async function updateBuyerPreferences(
   phone: string,
   data: Partial<BuyerSearchPreferences>
-): WhatsAppUserSession {
+): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
-  const current = sessions[cleanPhone] || getOrCreateSession(phone);
+  const current = await getOrCreateSession(phone);
 
   const existingPrefs = current.buyerPreferences || {};
   const updatedPrefs: BuyerSearchPreferences = {
@@ -130,15 +156,21 @@ export function updateBuyerPreferences(
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = merged;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(merged)]
+    );
+  } catch {}
+
   return merged;
 }
 
-export function resetBuyerPreferences(phone: string): WhatsAppUserSession {
+export async function resetBuyerPreferences(phone: string): Promise<WhatsAppUserSession> {
   const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-  const sessions = readSessions();
-  const current = sessions[cleanPhone] || getOrCreateSession(phone);
+  const current = await getOrCreateSession(phone);
 
   const merged: WhatsAppUserSession = {
     ...current,
@@ -147,8 +179,15 @@ export function resetBuyerPreferences(phone: string): WhatsAppUserSession {
     lastActive: new Date().toISOString(),
   };
 
-  sessions[cleanPhone] = merged;
-  writeSessions(sessions);
+  try {
+    await query(
+      `INSERT INTO public.whatsapp_sessions (phone, data, updated_at)
+       VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (phone) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [cleanPhone, JSON.stringify(merged)]
+    );
+  } catch {}
+
   return merged;
 }
 

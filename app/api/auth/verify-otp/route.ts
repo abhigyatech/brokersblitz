@@ -14,13 +14,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const check = verifyOtp(target, code);
+    const check = await verifyOtp(target, code);
     if (!check.success) {
       return NextResponse.json({ error: check.error }, { status: 400 });
     }
 
     const trimmed = target.trim();
-    let user = findUserByEmail(trimmed);
+    let user = await findUserByEmail(trimmed);
     if (user && user.isLocked) {
       return NextResponse.json(
         { error: 'Account suspended: Your broker profile has been locked by the platform administrator. Contact operations@brokersblitz.in.' },
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     if (!user) {
-      user = findUserByPhone(trimmed);
+      user = await findUserByPhone(trimmed);
     }
 
     if (user && user.isLocked) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     if (!user) {
       const isEmail = trimmed.includes('@');
-      const newUserRes = createNewUser({
+      const newUserRes = await createNewUser({
         fullName: fullName?.trim() || (isEmail ? trimmed.split('@')[0] : `User ${trimmed.slice(-4)}`),
         email: isEmail ? trimmed : `${trimmed}@brokersblitz.user`,
         phone: !isEmail ? trimmed : `98${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       user = newUserRes.user;
     }
 
-    const sessionToken = createSession(user.id);
+    const sessionToken = await createSession(user.id);
     const safeUser = {
       id: user.id,
       fullName: user.fullName,
@@ -93,4 +93,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

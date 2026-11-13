@@ -11,15 +11,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user) {
       return NextResponse.json({ error: 'Invalid session.' }, { status: 401 });
     }
 
-    const info = getUserReferralInfo(user.id);
+    const info = await getUserReferralInfo(user.id);
     return NextResponse.json({ success: true, ...info });
   } catch {
     return NextResponse.json({ error: 'Internal server error fetching referral info.' }, { status: 500 });
   }
 }
-

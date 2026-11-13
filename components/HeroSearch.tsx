@@ -305,7 +305,7 @@ export default function HeroSearch({
               'Assagao Pool Villa',
               'Whitefield Gated Villa',
               'Grade-A Office Gurugram',
-              'Rajesh Mehta Broker Store',
+              'Commercial Office Space',
             ].map((prompt, idx) => (
               <button
                 key={prompt}

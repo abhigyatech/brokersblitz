@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { readJsonFile, writeJsonFile } from '../db/json-store';
+import { query } from '../db/postgres';
 
 export interface RechargePack {
   id: string;
@@ -66,23 +66,57 @@ export const RECHARGE_PACKS: RechargePack[] = [
   },
 ];
 
-export function saveRechargeOrder(order: StoredRechargeOrder): void {
+export async function saveRechargeOrder(order: StoredRechargeOrder): Promise<void> {
   try {
-    const orders = readJsonFile<StoredRechargeOrder[]>('wallet_orders.json', []);
-    const idx = orders.findIndex((o) => o.orderId === order.orderId);
-    if (idx >= 0) {
-      orders[idx] = order;
-    } else {
-      orders.push(order);
-    }
-    writeJsonFile('wallet_orders.json', orders);
+    await query(
+      `INSERT INTO public.wallet_recharge_orders (
+        order_id, broker_id, pack_id, amount, credits,
+        bonus_credits, bonus_expiry_days, is_mock, status,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        now(), now()
+      )
+      ON CONFLICT (order_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        updated_at = now()`,
+      [
+        order.orderId,
+        order.brokerId,
+        order.packId,
+        order.amountInInr,
+        order.paidCredits,
+        order.bonusCredits,
+        order.bonusExpiryDays,
+        order.isMock,
+        order.status,
+      ]
+    );
   } catch {}
 }
 
-export function getRechargeOrder(orderId: string): StoredRechargeOrder | undefined {
+export async function getRechargeOrder(orderId: string): Promise<StoredRechargeOrder | undefined> {
   try {
-    const orders = readJsonFile<StoredRechargeOrder[]>('wallet_orders.json', []);
-    return orders.find((o) => o.orderId === orderId);
+    const res = await query(
+      `SELECT * FROM public.wallet_recharge_orders WHERE order_id = $1 LIMIT 1`,
+      [orderId]
+    );
+    if (res.rows.length === 0) return undefined;
+    const row = res.rows[0];
+    return {
+      orderId: row.order_id,
+      brokerId: row.broker_id,
+      packId: row.pack_id || 'pack_starter',
+      amountInInr: Number(row.amount),
+      paidCredits: Number(row.credits),
+      bonusCredits: Number(row.bonus_credits) || 0,
+      bonusExpiryDays: Number(row.bonus_expiry_days) || 0,
+      isMock: Boolean(row.is_mock),
+      status: row.status as 'created' | 'paid' | 'verified',
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+    };
   } catch {
     return undefined;
   }
@@ -94,10 +128,10 @@ function cleanEnv(val?: string) {
 }
 
 export function getRazorpayCredentials() {
-  const keyId = cleanEnv(process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) || 'rzp_test_51MockBrokersBlitz';
-  const keySecret = cleanEnv(process.env.RAZORPAY_KEY_SECRET) || 'mock_secret_BrokersBlitz2026SecureKey';
-  const webhookSecret = cleanEnv(process.env.RAZORPAY_WEBHOOK_SECRET) || 'mock_webhook_secret_BrokersBlitz';
-  const isMock = keyId.includes('Mock') || keySecret.includes('mock');
+  const keyId = cleanEnv(process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+  const keySecret = cleanEnv(process.env.RAZORPAY_KEY_SECRET);
+  const webhookSecret = cleanEnv(process.env.RAZORPAY_WEBHOOK_SECRET);
+  const isMock = !keyId || keyId.includes('Mock') || !keySecret || keySecret.includes('mock');
 
   return { keyId, keySecret, webhookSecret, isMock };
 }
@@ -117,7 +151,7 @@ export async function createRazorpayOrder(params: {
   const amountInPaise = Math.round(params.amountInInr * 100);
   const currency = params.currency || 'INR';
 
-  if (!isMock && !keyId.startsWith('rzp_test_51Mock')) {
+  if (!isMock && keyId && keySecret) {
     try {
       const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
       const res = await fetch('https://api.razorpay.com/v1/orders', {

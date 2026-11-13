@@ -94,7 +94,7 @@ export default function AppHighlightsBanner() {
   };
 
   return (
-    <section className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-10 my-4 border-t border-[#1A1A1A]/10 dark:border-white/10 transition-colors">
+    <section className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-10 my-4 transition-colors">
       <div className="w-full mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
           <span className="text-[10px] font-black uppercase tracking-wider text-[#DF6400] bg-[#DF6400]/10 px-2.5 py-1 rounded-md inline-block mb-1.5">

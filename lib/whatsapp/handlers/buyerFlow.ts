@@ -14,6 +14,7 @@ import {
   getCitiesForState,
   matchIndianCity,
 } from '@/lib/geo/indian-locations';
+import { PropertyListing } from '@/data/types';
 
 function getAppBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -24,8 +25,8 @@ function getAppBaseUrl(): string {
 }
 
 export async function promptBuyerIntent(from: string, userName?: string): Promise<boolean> {
-  resetBuyerPreferences(from);
-  setSessionStep(from, 'buyer_step1_intent');
+  await resetBuyerPreferences(from);
+  await setSessionStep(from, 'buyer_step1_intent');
 
   const greeting = `Namaste ${userName || 'there'}! Welcome to *BrokersBlitz* 🇮🇳 - India's direct broker-verified real estate intelligence network.\n\nWhat are you looking for today?`;
 
@@ -37,7 +38,7 @@ export async function promptBuyerIntent(from: string, userName?: string): Promis
 }
 
 export async function promptBuyerState(from: string, isRent: boolean): Promise<boolean> {
-  setSessionStep(from, 'buyer_step2_state');
+  await setSessionStep(from, 'buyer_step2_state');
 
   const rows = POPULAR_INDIAN_STATES.slice(0, 9).map((s) => ({
     id: `buyer_state_${s.code.toLowerCase()}`,
@@ -71,7 +72,7 @@ export async function promptBuyerCityForState(
   stateCode: string,
   isRent: boolean
 ): Promise<boolean> {
-  setSessionStep(from, 'buyer_step2_city');
+  await setSessionStep(from, 'buyer_step2_city');
 
   const cities = getCitiesForState(stateCode);
   const rows = cities.slice(0, 9).map((c) => ({
@@ -101,7 +102,7 @@ export async function promptBuyerCityForState(
 }
 
 export async function promptBuyerLocality(from: string, cityName: string): Promise<boolean> {
-  setSessionStep(from, 'buyer_step2_locality');
+  await setSessionStep(from, 'buyer_step2_locality');
 
   const text = `*Step 3 of 5: Locality / Area in ${cityName}* 📍\n\nDo you have a specific neighborhood, sector, or colony in mind?\n\n• Tap *Any Locality* to browse all areas\n• Or reply with your preferred area (e.g. _"Vijay Nagar"_, _"Bandra"_, _"Whitefield"_, _"Sector 78"_):`;
 
@@ -112,7 +113,7 @@ export async function promptBuyerLocality(from: string, cityName: string): Promi
 }
 
 export async function promptBuyerCategory(from: string, city: string): Promise<boolean> {
-  setSessionStep(from, 'buyer_step3_category');
+  await setSessionStep(from, 'buyer_step3_category');
 
   return sendButtonMessage(
     from,
@@ -126,7 +127,7 @@ export async function promptBuyerCategory(from: string, city: string): Promise<b
 }
 
 export async function promptBuyerBhk(from: string, categoryLabel: string, city: string): Promise<boolean> {
-  setSessionStep(from, 'buyer_step4_bhk');
+  await setSessionStep(from, 'buyer_step4_bhk');
 
   return sendButtonMessage(
     from,
@@ -144,7 +145,7 @@ export async function promptBuyerBudget(
   isRent: boolean,
   summarySpecs: string
 ): Promise<boolean> {
-  setSessionStep(from, 'buyer_step5_budget');
+  await setSessionStep(from, 'buyer_step5_budget');
 
   if (isRent) {
     return sendButtonMessage(
@@ -170,16 +171,16 @@ export async function promptBuyerBudget(
 }
 
 export async function executeBuyerSearch(from: string): Promise<boolean> {
-  const session = getOrCreateSession(from);
+  const session = await getOrCreateSession(from);
   const prefs = session.buyerPreferences || {};
-  setSessionStep(from, 'idle');
+  await setSessionStep(from, 'idle');
 
   const city = prefs.city || 'Indore';
   const bhk = prefs.bedrooms ? String(prefs.bedrooms) : undefined;
   const category = prefs.category === 'apartment' ? 'apartment' : prefs.category === 'villa' ? 'villa' : undefined;
   const purpose = prefs.purpose || 'sale';
 
-  const results = searchProperties({
+  const results: PropertyListing[] = await searchProperties({
     city,
     bhk,
     category,
@@ -198,7 +199,7 @@ export async function executeBuyerSearch(from: string): Promise<boolean> {
 
     let response = `*FOUND ${results.length} VERIFIED PROPERTIES IN ${city.toUpperCase()}!* 🎯\nCriteria: ${bhkLabel}${prefs.categoryLabel || 'Residential'}${localityLabel}${budgetLabel}\n\n`;
 
-    topMatches.forEach((p, idx) => {
+    topMatches.forEach((p: PropertyListing, idx: number) => {
       const price = formatPriceIndian(p.price);
       response += `${idx + 1}. 🏠 *${p.title}*\n`;
       response += `   • 💰 *Price:* ${price}\n`;
@@ -217,14 +218,14 @@ export async function executeBuyerSearch(from: string): Promise<boolean> {
     ]);
   }
 
-  const fallbackResults = searchProperties({ city, purpose });
+  const fallbackResults: PropertyListing[] = await searchProperties({ city, purpose });
   const closest = fallbackResults.slice(0, 2);
 
   let noMatchMsg = `*NO EXACT MATCHES IN THAT BUDGET RANGE* 🔍\nWe currently don't have active listings matching all specific filters in ${city}.\n\n`;
 
   if (closest.length > 0) {
     noMatchMsg += `*Closest Verified Options in ${city}:* 🏙️\n\n`;
-    closest.forEach((p, idx) => {
+    closest.forEach((p: PropertyListing, idx: number) => {
       noMatchMsg += `${idx + 1}. 🏠 *${p.title}*\n   • 💰 *Price:* ${formatPriceIndian(p.price)}\n   • 📍 *Location:* ${p.locality}\n   • 🔗 *Link:* ${baseUrl}/property/${p.slug}\n\n`;
     });
   }
@@ -244,7 +245,7 @@ export async function handleBuyerInquiry(
   userName?: string,
   actionId?: string
 ): Promise<boolean> {
-  const session = getOrCreateSession(from, userName);
+  const session = await getOrCreateSession(from, userName);
   const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
   const rawInput = text.trim();
 
@@ -260,7 +261,7 @@ export async function handleBuyerInquiry(
 
   if (actionId === 'buyer_intent_buy' || actionId === 'buyer_intent_rent') {
     const isRent = actionId === 'buyer_intent_rent';
-    updateBuyerPreferences(from, { purpose: isRent ? 'rent' : 'sale' });
+    await updateBuyerPreferences(from, { purpose: isRent ? 'rent' : 'sale' });
     return promptBuyerState(from, isRent);
   }
 
@@ -288,7 +289,7 @@ export async function handleBuyerInquiry(
     } else if (rawInput) {
       const directCity = matchIndianCity(rawInput);
       if (directCity) {
-        updateBuyerPreferences(from, { city: directCity.city, state: directCity.state });
+        await updateBuyerPreferences(from, { city: directCity.city, state: directCity.state });
         return promptBuyerLocality(from, directCity.city);
       }
 
@@ -300,12 +301,12 @@ export async function handleBuyerInquiry(
     }
 
     if (stateCode && stateName) {
-      updateBuyerPreferences(from, { state: stateName, stateCode });
+      await updateBuyerPreferences(from, { state: stateName, stateCode });
       return promptBuyerCityForState(from, stateName, stateCode, isRent);
     }
 
     const fallbackCity = matchIndianCity(rawInput) || { city: 'Indore', state: 'Madhya Pradesh' };
-    updateBuyerPreferences(from, { city: fallbackCity.city, state: fallbackCity.state });
+    await updateBuyerPreferences(from, { city: fallbackCity.city, state: fallbackCity.state });
     return promptBuyerLocality(from, fallbackCity.city);
   }
 
@@ -333,7 +334,7 @@ export async function handleBuyerInquiry(
     }
 
     cityName = cityName || 'Indore';
-    updateBuyerPreferences(from, { city: cityName });
+    await updateBuyerPreferences(from, { city: cityName });
     return promptBuyerLocality(from, cityName);
   }
 
@@ -349,7 +350,7 @@ export async function handleBuyerInquiry(
       locality = rawInput.trim();
     }
 
-    updateBuyerPreferences(from, { locality });
+    await updateBuyerPreferences(from, { locality });
     return promptBuyerCategory(from, city);
   }
 
@@ -359,16 +360,16 @@ export async function handleBuyerInquiry(
     const city = prefs.city || 'Indore';
 
     if (catId === 'buyer_cat_flat' || rawInput.toLowerCase().includes('flat') || rawInput.toLowerCase().includes('apartment')) {
-      updateBuyerPreferences(from, { category: 'apartment', categoryLabel: 'Flat / Apartment' });
+      await updateBuyerPreferences(from, { category: 'apartment', categoryLabel: 'Flat / Apartment' });
       return promptBuyerBhk(from, 'Flat / Apartment', city);
     } else if (catId === 'buyer_cat_villa' || rawInput.toLowerCase().includes('villa') || rawInput.toLowerCase().includes('house')) {
-      updateBuyerPreferences(from, { category: 'villa', categoryLabel: 'Villa / House' });
+      await updateBuyerPreferences(from, { category: 'villa', categoryLabel: 'Villa / House' });
       return promptBuyerBhk(from, 'Villa / House', city);
     } else if (catId === 'buyer_cat_plot' || rawInput.toLowerCase().includes('plot') || rawInput.toLowerCase().includes('land')) {
-      updateBuyerPreferences(from, { category: 'plot', categoryLabel: 'Residential Plot', bedrooms: 0 });
+      await updateBuyerPreferences(from, { category: 'plot', categoryLabel: 'Residential Plot', bedrooms: 0 });
       return promptBuyerBudget(from, prefs.purpose === 'rent', `Plot in ${city}`);
     } else {
-      updateBuyerPreferences(from, { category: 'apartment', categoryLabel: 'Flat / Apartment' });
+      await updateBuyerPreferences(from, { category: 'apartment', categoryLabel: 'Flat / Apartment' });
       return promptBuyerBhk(from, 'Flat / Apartment', city);
     }
   }
@@ -381,7 +382,7 @@ export async function handleBuyerInquiry(
     else if (actionId === 'buyer_bhk_4' || rawInput.includes('4')) count = 4;
 
     const prefs = session.buyerPreferences || {};
-    updateBuyerPreferences(from, { bedrooms: count });
+    await updateBuyerPreferences(from, { bedrooms: count });
     const summary = `${count} BHK ${prefs.categoryLabel || 'Flat'} in ${prefs.city || 'Indore'}`;
     return promptBuyerBudget(from, prefs.purpose === 'rent', summary);
   }
@@ -430,12 +431,12 @@ export async function handleBuyerInquiry(
       }
     }
 
-    updateBuyerPreferences(from, { minPrice, maxPrice, budgetLabel });
+    await updateBuyerPreferences(from, { minPrice, maxPrice, budgetLabel });
     return executeBuyerSearch(from);
   }
 
   if (actionId === 'buyer_action_visit') {
-    setSessionStep(from, 'booking_visit');
+    await setSessionStep(from, 'booking_visit');
     const visitMsg = `*SCHEDULE A FREE VERIFIED SITE VISIT* 📅\n------------------------------\nWhich property or locality would you like to visit?\n\nPlease reply with the Property Title, ID, or Locality (e.g., "Scheme 78 3BHK" or "Vijay Nagar Flat").\n\nOur certified partner broker will coordinate your private guided viewing with verified seller documentation. 🤝`;
     await sendTextMessage(from, visitMsg);
     return true;
@@ -452,9 +453,9 @@ export async function handleBuyerInquiry(
   }
 
   if (session.currentStep === 'booking_visit') {
-    setSessionStep(from, 'idle');
+    await setSessionStep(from, 'idle');
     const query = rawInput.toLowerCase();
-    const allProps = getAllProperties();
+    const allProps = await getAllProperties();
     const matched = allProps.find(
       (p) =>
         p.id.toLowerCase() === query ||
@@ -464,7 +465,7 @@ export async function handleBuyerInquiry(
     ) || allProps[0];
 
     if (matched) {
-      createLead({
+      await createLead({
         propertyId: matched.id,
         propertyTitle: matched.title,
         propertyPrice: matched.formattedPrice,
@@ -490,7 +491,7 @@ export async function handleBuyerInquiry(
 
   const directMatch = matchIndianCity(rawInput);
   if (directMatch) {
-    updateBuyerPreferences(from, {
+    await updateBuyerPreferences(from, {
       city: directMatch.city,
       state: directMatch.state,
       purpose: rawInput.toLowerCase().includes('rent') ? 'rent' : 'sale',

@@ -103,7 +103,7 @@ export default function BrokersClient({ initialBrokers }: BrokersClientProps) {
     fetch('/api/brokers')
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.brokers) && data.brokers.length > 0) {
+        if (data.success && Array.isArray(data.brokers)) {
           setBrokers(data.brokers);
         }
       })

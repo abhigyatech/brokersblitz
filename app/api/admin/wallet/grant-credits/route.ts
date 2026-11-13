@@ -12,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const admin = verifySession(token);
+    const admin = await verifySession(token);
     if (!admin || admin.role !== 'admin') {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Expiry days must be between 1 and 365 days' }, { status: 400 });
     }
 
-    const targetUser = findUserById(brokerId);
+    const targetUser = await findUserById(brokerId);
     if (!targetUser || targetUser.role !== 'broker') {
       return NextResponse.json({ success: false, error: 'Target user is not a verified broker' }, { status: 404 });
     }

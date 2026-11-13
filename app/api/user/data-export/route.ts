@@ -11,12 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
-    const exportResult = generateDataPrincipalExport(user.id);
+    const exportResult = await generateDataPrincipalExport(user.id);
     if (!exportResult.success || !exportResult.data) {
       return NextResponse.json(
         { error: exportResult.error || 'Failed to export personal data' },
@@ -40,4 +40,3 @@ export async function GET() {
     );
   }
 }
-

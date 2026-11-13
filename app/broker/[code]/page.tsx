@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Star, MessageSquare } from 'lucide-react';
-import initialPropertiesData from '../../../data/properties.json';
 import { PropertyListing } from '../../../data/types';
 import PropertyCard from '../../../components/PropertyCard';
 import ShareModal from '../../../components/ShareModal';
@@ -18,9 +17,7 @@ function BrokerStoreInner() {
   const params = useParams();
   const storeCode = (params?.code as string)?.toLowerCase();
 
-  const [properties, setProperties] = useState<PropertyListing[]>(
-    initialPropertiesData as PropertyListing[]
-  );
+  const [properties, setProperties] = useState<PropertyListing[]>([]);
 
   const [isBrokerLocked, setIsBrokerLocked] = useState(false);
   const [remoteBrokerInfo, setRemoteBrokerInfo] = useState<any>(null);

@@ -3,7 +3,7 @@ import { setSessionStep, resetDraftListing, getOrCreateSession } from '@/lib/wha
 import { DraftListingData } from '@/lib/whatsapp/types';
 import { createProperty } from '@/lib/db/properties-store';
 import { processListingOnCreation } from '@/lib/listings/listing-lifecycle';
-import { StoredUser, findUserByPhone, findUserById, getAllUsers, saveUsers } from '@/lib/auth/user-store';
+import { StoredUser, findUserByPhone, findUserById, createNewUser } from '@/lib/auth/user-store';
 import { formatDraftSummaryCard } from '@/lib/whatsapp/voice-to-listing';
 import { PropertyCategory, FurnishingStatus } from '@/data/types';
 
@@ -11,11 +11,11 @@ export async function promptListingConfirmation(
   from: string,
   draft: DraftListingData
 ): Promise<boolean> {
-  setSessionStep(from, 'step6_confirm');
-  const session = getOrCreateSession(from);
+  await setSessionStep(from, 'step6_confirm');
+  const session = await getOrCreateSession(from);
   const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
 
-  const brokerUser = (session.brokerId ? findUserById(session.brokerId) : null) || findUserByPhone(cleanPhone);
+  const brokerUser = (session.brokerId ? await findUserById(session.brokerId) : null) || (await findUserByPhone(cleanPhone));
 
   const brokerInfo = brokerUser
     ? {
@@ -46,32 +46,27 @@ export async function executeListingPublish(
   draft: DraftListingData,
   userName?: string
 ): Promise<boolean> {
-  const session = getOrCreateSession(from);
+  const session = await getOrCreateSession(from);
   const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
 
-  let brokerUser = (session.brokerId ? findUserById(session.brokerId) : null) || findUserByPhone(cleanPhone);
+  let brokerUser = (session.brokerId ? await findUserById(session.brokerId) : null) || (await findUserByPhone(cleanPhone));
 
   if (!brokerUser) {
-    const allUsers = getAllUsers();
-    brokerUser = {
-      id: `broker-wa-${cleanPhone}`,
-      fullName: session.brokerName || userName || 'WhatsApp Partner Broker',
+    const createRes = await createNewUser({
+      fullName: session.brokerName || userName || 'Partner Broker',
       email: `broker.${cleanPhone}@whatsapp.brokersblitz.in`,
       phone: cleanPhone,
       role: 'broker',
-      passwordHash: 'whatsapp_verified',
-      passwordSalt: 'salt',
-      agencyName: session.agencyName || 'BrokersBlitz WhatsApp Network',
+      password: `WaBroker_${Date.now()}!`,
+      agencyName: session.agencyName || 'Independent Broker Network',
       storeCode: session.brokerCode || `wa-${cleanPhone}`,
       operatingCity: draft.city || 'Indore',
       dpdpConsent: true,
-      dpdpConsentDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    allUsers.push(brokerUser);
-    saveUsers(allUsers);
+    });
+    brokerUser = createRes.user || null;
   }
+
+  if (!brokerUser) return false;
 
   const categoryMapped: PropertyCategory =
     draft.category === 'villa'
@@ -93,7 +88,7 @@ export async function executeListingPublish(
       ? 'unfurnished'
       : 'semi_furnished';
 
-  const newProperty = createProperty(
+  const newProperty = await createProperty(
     {
       title: draft.title || `${draft.bedrooms || 3} BHK Flat in ${draft.locality || 'Prime Area'}`,
       purpose: draft.purpose || 'sale',
@@ -110,13 +105,13 @@ export async function executeListingPublish(
       bedrooms: draft.bedrooms || 0,
       bathrooms: draft.bathrooms || 1,
       amenities: draft.amenities && draft.amenities.length > 0 ? draft.amenities : ['Lift', 'Covered Parking', '24/7 Security'],
-      description: draft.description || `Direct verified listing by ${brokerUser.fullName} on BrokersBlitz WhatsApp Gateway.`,
+      description: draft.description || `Direct listing by ${brokerUser.fullName} on BrokersBlitz.`,
     },
     brokerUser
   );
 
   const processed = await processListingOnCreation(newProperty, brokerUser.id);
-  resetDraftListing(from);
+  await resetDraftListing(from);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
     ? process.env.NEXT_PUBLIC_APP_URL
@@ -127,7 +122,7 @@ export async function executeListingPublish(
     ? 'Promotional Free Listing (First 5 free for 15 days rule active)'
     : 'Active Daily Billed Listing (2 credits/day)';
 
-  const successMessage = `*LISTING PUBLISHED SUCCESSFULLY!* 🎉\n------------------------------\n• 🏠 *Title:* ${processed.title}\n• 👤 *Listed By:* ${brokerUser.fullName} (${brokerUser.agencyName || 'Partner Agency'})\n• 🌐 *Partner Store:* ${baseUrl}/broker/${brokerUser.storeCode || 'indore1001'}\n• 📊 *Status:* Active (${quotaNotice})\n• 🆔 *Property ID:* ${processed.id}\n\n*Live Web Link:*\n🔗 ${liveUrl}\n------------------------------\nYour property is now live and will be shared with verified buyers searching in ${processed.city}. Send another voice note anytime to list your next property! 🚀`;
+  const successMessage = `*LISTING PUBLISHED SUCCESSFULLY!* 🎉\n------------------------------\n• 🏠 *Title:* ${processed.title}\n• 👤 *Listed By:* ${brokerUser.fullName} (${brokerUser.agencyName || 'Partner Agency'})\n• 🌐 *Partner Store:* ${baseUrl}/broker/${brokerUser.storeCode || brokerUser.id.replace(/[^a-zA-Z0-9]/g, '')}\n• 📊 *Status:* Active (${quotaNotice})\n• 🆔 *Property ID:* ${processed.id}\n\n*Live Web Link:*\n🔗 ${liveUrl}\n------------------------------\nYour property is now live and will be shared with verified buyers searching in ${processed.city}. Send another voice note anytime to list your next property! 🚀`;
 
   await sendTextMessage(from, successMessage);
   return true;

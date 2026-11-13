@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const erasureRes = executeDataPrincipalErasure(user.id);
+    const erasureRes = await executeDataPrincipalErasure(user.id);
     if (!erasureRes.success) {
       return NextResponse.json(
         { error: erasureRes.error || 'Failed to erase personal data.' },
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    deleteSession(token);
+    await deleteSession(token);
 
     const response = NextResponse.json({
       success: true,
@@ -51,4 +51,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

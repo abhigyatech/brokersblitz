@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user) {
       return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
     }
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     const search = searchParams.get('search') || undefined;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50;
 
-    const statement = getWalletStatement(targetBrokerId, { type, search, limit });
+    const statement = await getWalletStatement(targetBrokerId, { type, search, limit });
 
     return NextResponse.json({
       success: true,

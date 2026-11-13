@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    const currentAdmin = verifySession(token);
+    const currentAdmin = await verifySession(token);
     if (!currentAdmin || currentAdmin.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Only authorized administrators can create admin accounts.' },
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = createAdminUser(currentAdmin.email, {
+    const result = await createAdminUser(currentAdmin.email, {
       fullName,
       email,
       phone,
@@ -55,4 +55,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }
-

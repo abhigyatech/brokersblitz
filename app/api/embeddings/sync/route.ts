@@ -3,7 +3,7 @@ import { generatePlatformCorpus, fetchOpenAIEmbedding } from '@/lib/ai/embedding
 
 export async function POST(req: NextRequest) {
   try {
-    const corpus = generatePlatformCorpus();
+    const corpus = await generatePlatformCorpus();
     const openAiKey = process.env.OPENAI_API_KEY;
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const corpus = generatePlatformCorpus();
+  const corpus = await generatePlatformCorpus();
   return NextResponse.json({
     success: true,
     totalChunks: corpus.length,
@@ -75,4 +75,3 @@ export async function GET() {
     })),
   });
 }
-

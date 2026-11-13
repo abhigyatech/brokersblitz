@@ -41,6 +41,7 @@ import {
   Lock,
   Scale,
   QrCode,
+  Bot,
 } from 'lucide-react';
 import { PropertyListing, UserRole, Lead } from '../../data/types';
 import { useTheme } from '../../components/ThemeProvider';
@@ -50,6 +51,7 @@ import DashboardSkeleton from '../../components/DashboardSkeleton';
 import BrokerWalletView from '../../components/BrokerWalletView';
 import AdminWalletView from '../../components/AdminWalletView';
 import AdminReferralView from '../../components/AdminReferralView';
+import AdminChatbotControlView from '../../components/AdminChatbotControlView';
 import UserReferralCard from '../../components/UserReferralCard';
 import CriticalActionConfirmModal from '../../components/CriticalActionConfirmModal';
 import PrivacyComplianceView from '../../components/PrivacyComplianceView';
@@ -538,6 +540,7 @@ export default function DashboardPage() {
     { id: 'leads', label: 'Site Visits & Leads', icon: CalendarCheck },
     { id: 'wallet', label: 'Wallet & Ledger', icon: Wallet },
     { id: 'referrals', label: 'Referral Program', icon: Gift },
+    { id: 'chatbot', label: 'Chatbot Controls', icon: Bot },
     { id: 'admins', label: 'Admin Team', icon: ShieldCheck },
     { id: 'privacy', label: 'Privacy & DPDP Rights', icon: Lock },
   ];
@@ -1595,6 +1598,10 @@ export default function DashboardPage() {
 
           {isAdmin && activeTab === 'referrals' && (
             <AdminReferralView onToast={showToast} />
+          )}
+
+          {isAdmin && activeTab === 'chatbot' && (
+            <AdminChatbotControlView onToast={showToast} />
           )}
 
           {isAdmin && activeTab === 'admins' && (

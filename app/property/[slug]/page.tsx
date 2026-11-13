@@ -1,6 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getAllProperties, getPropertyBySlug } from '@/lib/db/properties-store';
@@ -10,10 +8,10 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export function generateStaticParams() {
-  const properties = getAllProperties();
+export async function generateStaticParams() {
+  const properties = await getAllProperties();
   if (properties.length === 0) {
-    return [{ slug: 'sample-property' }];
+    return [{ slug: '_placeholder' }];
   }
   return properties.map((p) => ({
     slug: p.slug,
@@ -22,7 +20,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  if (!slug || slug === '_placeholder') {
+    return { title: 'Property Not Found | BrokersBlitz' };
+  }
+
+  const property = await getPropertyBySlug(slug);
 
   if (!property) {
     return { title: 'Property Not Found | BrokersBlitz' };
@@ -37,13 +39,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description: desc,
-      images: [{ url: property.primaryImage, width: 1200, height: 630, alt: property.title }],
+      images: property.primaryImage ? [{ url: property.primaryImage, width: 1200, height: 630, alt: property.title }] : [],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description: desc,
-      images: [property.primaryImage],
+      images: property.primaryImage ? [property.primaryImage] : [],
     },
     alternates: {
       canonical: `https://www.brokersblitz.in/property/${property.slug}`,
@@ -53,13 +55,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PropertyPage({ params }: Props) {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  if (!slug || slug === '_placeholder') {
+    notFound();
+  }
+
+  const property = await getPropertyBySlug(slug);
 
   if (!property) {
     notFound();
   }
 
-  const properties = getAllProperties();
+  const properties = await getAllProperties();
   const related = properties
     .filter((p) => p.city === property.city && p.id !== property.id)
     .slice(0, 4);
@@ -70,7 +76,7 @@ export default async function PropertyPage({ params }: Props) {
     name: property.title,
     description: property.description,
     url: `https://www.brokersblitz.in/property/${property.slug}`,
-    image: [property.primaryImage, ...(property.additionalImages || [])],
+    image: [property.primaryImage, ...(property.additionalImages || [])].filter(Boolean),
     offers: {
       '@type': 'Offer',
       price: property.price,

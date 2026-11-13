@@ -2,14 +2,18 @@ import { MetadataRoute } from 'next';
 import { getAllProperties } from '@/lib/db/properties-store';
 import { getAllBrokers } from '@/lib/auth/user-store';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://www.brokersblitz.in';
   const currentDate = new Date().toISOString();
 
   const cities = ['mumbai', 'bengaluru', 'delhi-ncr', 'pune', 'hyderabad', 'goa'];
   const categories = ['apartment', 'villa', 'commercial-office', 'retail-shop', 'residential-plot'];
 
-  const properties = getAllProperties();
+  const [properties, brokers] = await Promise.all([
+    getAllProperties(),
+    getAllBrokers(),
+  ]);
+
   const propertyUrls = properties.map((p) => ({
     url: `${baseUrl}/property/${p.slug}`,
     lastModified: currentDate,
@@ -31,7 +35,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const brokers = getAllBrokers();
   const brokerUrls = brokers.map((b) => ({
     url: `${baseUrl}/broker/${b.storeCode || (b.agencyName || b.fullName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
     lastModified: currentDate,

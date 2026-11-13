@@ -1,54 +1,52 @@
-import { readJsonFile, writeJsonFile } from './json-store';
+import { query } from './postgres';
 
-interface SavedEntry {
-  userId: string;
-  propertyIds: string[];
-  updatedAt: string;
+export async function getSavedPropertyIds(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const res = await query(
+      `SELECT property_id::text FROM public.saved_properties WHERE user_id::text = $1`,
+      [userId]
+    );
+    return res.rows.map((r) => r.property_id);
+  } catch {
+    return [];
+  }
 }
 
-function loadSaved(): SavedEntry[] {
-  return readJsonFile<SavedEntry[]>('saved.json', []);
-}
-
-function persistSaved(entries: SavedEntry[]): void {
-  writeJsonFile('saved.json', entries);
-}
-
-export function getSavedPropertyIds(userId: string): string[] {
-  const entries = loadSaved();
-  const entry = entries.find((e) => e.userId === userId);
-  return entry ? entry.propertyIds : [];
-}
-
-export function toggleSavedProperty(userId: string, propertyId: string): { isSaved: boolean; propertyIds: string[] } {
-  const entries = loadSaved();
-  const index = entries.findIndex((e) => e.userId === userId);
-
-  let propertyIds: string[] = [];
-  let isSaved = false;
-
-  if (index === -1) {
-    propertyIds = [propertyId];
-    isSaved = true;
-    entries.push({
-      userId,
-      propertyIds,
-      updatedAt: new Date().toISOString(),
-    });
-  } else {
-    const current = entries[index].propertyIds;
-    if (current.includes(propertyId)) {
-      propertyIds = current.filter((id) => id !== propertyId);
-      isSaved = false;
-    } else {
-      propertyIds = [...current, propertyId];
-      isSaved = true;
-    }
-    entries[index].propertyIds = propertyIds;
-    entries[index].updatedAt = new Date().toISOString();
+export async function toggleSavedProperty(
+  userId: string,
+  propertyId: string
+): Promise<{ isSaved: boolean; propertyIds: string[] }> {
+  if (!userId || !propertyId) {
+    return { isSaved: false, propertyIds: [] };
   }
 
-  persistSaved(entries);
-  return { isSaved, propertyIds };
-}
+  try {
+    const existing = await query(
+      `SELECT id FROM public.saved_properties WHERE user_id::text = $1 AND property_id::text = $2 LIMIT 1`,
+      [userId, propertyId]
+    );
 
+    let isSaved = false;
+    if (existing.rows.length > 0) {
+      await query(
+        `DELETE FROM public.saved_properties WHERE user_id::text = $1 AND property_id::text = $2`,
+        [userId, propertyId]
+      );
+      isSaved = false;
+    } else {
+      await query(
+        `INSERT INTO public.saved_properties (user_id, property_id, created_at)
+         VALUES ($1::uuid, $2::uuid, now())
+         ON CONFLICT (user_id, property_id) DO NOTHING`,
+        [userId, propertyId]
+      );
+      isSaved = true;
+    }
+
+    const propertyIds = await getSavedPropertyIds(userId);
+    return { isSaved, propertyIds };
+  } catch {
+    return { isSaved: false, propertyIds: [] };
+  }
+}

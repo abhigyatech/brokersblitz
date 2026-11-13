@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseNaturalLanguageQuery, parseQueryWithOpenAI } from '@/lib/ai/ai-search-parser';
-import { getAllProperties, searchProperties } from '@/lib/db/properties-store';
+import { searchProperties } from '@/lib/db/properties-store';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let results = searchProperties({
+    let results = await searchProperties({
       city: parsed.city,
       category: parsed.category,
       purpose: parsed.purpose,
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (results.length === 0 && (parsed.city || parsed.category)) {
-      results = searchProperties({
+      results = await searchProperties({
         city: parsed.city,
         category: parsed.category,
       });
@@ -46,4 +46,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

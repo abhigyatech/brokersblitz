@@ -14,9 +14,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BrokersPage() {
-  const allUsers = getAllUsers();
-  const allProps = getAllProperties();
+export default async function BrokersPage() {
+  const [allUsers, allProps] = await Promise.all([
+    getAllUsers(),
+    getAllProperties(),
+  ]);
 
   const brokerUsers = allUsers.filter(
     (u) => u.role === 'broker' && !u.isLocked
@@ -48,10 +50,7 @@ export default function BrokersPage() {
     });
 
     const matchedProp = brokerProps[0];
-    const avatar =
-      b.avatar ||
-      matchedProp?.broker.avatar ||
-      'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80';
+    const avatar = b.avatar || matchedProp?.broker.avatar || '';
 
     const operatingCity =
       b.operatingCity || matchedProp?.city || matchedProp?.broker.city || 'Pan India';
@@ -83,8 +82,8 @@ export default function BrokersPage() {
       matchedProp?.broker.bio ||
       `Verified real estate advisor with ${b.experienceYears || 10}+ years of proven transactional expertise across ${operatingCity}.`;
 
-    const rating = matchedProp?.broker.rating || 4.9;
-    const reraNumber = b.reraNumber || matchedProp?.broker.reraNumber || 'Applied (Self-declared)';
+    const rating = matchedProp?.broker.rating || 5.0;
+    const reraNumber = b.reraNumber || matchedProp?.broker.reraNumber || 'Self-Reported';
 
     return {
       id: b.id,
@@ -121,4 +120,3 @@ export default function BrokersPage() {
     </Suspense>
   );
 }
-

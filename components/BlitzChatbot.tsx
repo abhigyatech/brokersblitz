@@ -65,6 +65,34 @@ export default function BlitzChatbot({
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
 
+  const [chatbotConfig, setChatbotConfig] = useState<{
+    enabled: boolean;
+    showAiAssistant: boolean;
+    showWhatsApp: boolean;
+    whatsappNumber: string;
+  }>({
+    enabled: true,
+    showAiAssistant: true,
+    showWhatsApp: true,
+    whatsappNumber: WHATSAPP_DISPLAY_NUMBER,
+  });
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/chatbot/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.config) {
+          setChatbotConfig(data.config);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setConfigLoaded(true));
+  }, []);
+
+  const rawWhatsAppNumber = (chatbotConfig.whatsappNumber || WHATSAPP_RAW_NUMBER).replace(/[^0-9]/g, '') || WHATSAPP_RAW_NUMBER;
+  const displayWhatsAppNumber = chatbotConfig.whatsappNumber || WHATSAPP_DISPLAY_NUMBER;
+
   const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,8 +126,8 @@ export default function BlitzChatbot({
   const recognitionRef = useRef<any>(null);
 
   const qrMatrix = useMemo(() => {
-    return generateWhatsAppQRMatrix(`https://wa.me/${WHATSAPP_RAW_NUMBER}?text=Hi%20BrokersBlitz`);
-  }, []);
+    return generateWhatsAppQRMatrix(`https://wa.me/${rawWhatsAppNumber}?text=Hi%20BrokersBlitz`);
+  }, [rawWhatsAppNumber]);
 
   const [minBookingDate, setMinBookingDate] = useState<string>('');
 
@@ -138,6 +166,12 @@ export default function BlitzChatbot({
   useEffect(() => {
     const handleEnquireEvent = async (e: any) => {
       const data = e.detail;
+      if (!chatbotConfig.enabled) return;
+      if (!chatbotConfig.showAiAssistant && chatbotConfig.showWhatsApp) {
+        setIsWhatsAppModalOpen(true);
+        return;
+      }
+      if (!chatbotConfig.showAiAssistant) return;
       if (!isOpen) toggleChat();
       setIsSpeedDialOpen(false);
       setIsWhatsAppModalOpen(false);
@@ -185,12 +219,12 @@ export default function BlitzChatbot({
           {
             id: `bot-fb-${Date.now()}`,
             sender: 'bot',
-            text: `Inquiry recorded for "${data.propertyTitle}". Our WhatsApp Support desk at ${WHATSAPP_DISPLAY_NUMBER} is ready to schedule your property walkthrough.`,
+            text: `Inquiry recorded for "${data.propertyTitle}". Our WhatsApp Support desk at ${displayWhatsAppNumber} is ready to schedule your property walkthrough.`,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             action: {
               type: 'whatsapp',
-              label: `Chat on WhatsApp (${WHATSAPP_DISPLAY_NUMBER})`,
-              url: `https://wa.me/${WHATSAPP_RAW_NUMBER}`,
+              label: `Chat on WhatsApp (${displayWhatsAppNumber})`,
+              url: `https://wa.me/${rawWhatsAppNumber}`,
             },
           },
         ]);
@@ -201,11 +235,11 @@ export default function BlitzChatbot({
 
     window.addEventListener('blitzbot:enquire', handleEnquireEvent);
     return () => window.removeEventListener('blitzbot:enquire', handleEnquireEvent);
-  }, [isOpen, toggleChat]);
+  }, [isOpen, toggleChat, chatbotConfig, displayWhatsAppNumber, rawWhatsAppNumber]);
 
   const handleCopyNumber = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(WHATSAPP_DISPLAY_NUMBER);
+      navigator.clipboard.writeText(displayWhatsAppNumber);
       setCopiedNumber(true);
       setTimeout(() => setCopiedNumber(false), 2500);
     }
@@ -492,78 +526,108 @@ export default function BlitzChatbot({
     }
   };
 
+  if (configLoaded && (!chatbotConfig.enabled || (!chatbotConfig.showAiAssistant && !chatbotConfig.showWhatsApp))) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-50 font-sans">
       {!isOpen && !isWhatsAppModalOpen && (
-        <div
-          className="relative flex flex-col items-end gap-3"
-          onMouseEnter={() => setIsSpeedDialOpen(true)}
-          onMouseLeave={() => setIsSpeedDialOpen(false)}
-        >
-          {isSpeedDialOpen && (
-            <div className="flex flex-col items-end gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
-              <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsWhatsAppModalOpen(true)}>
-                <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1B17] text-[#1A1A1A] dark:text-white text-xs font-bold shadow-lg border border-[#1A1A1A]/10 dark:border-white/10 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  WhatsApp Support
-                </span>
+        chatbotConfig.showAiAssistant && chatbotConfig.showWhatsApp ? (
+          <div
+            className="relative flex flex-col items-end gap-3"
+            onMouseEnter={() => setIsSpeedDialOpen(true)}
+            onMouseLeave={() => setIsSpeedDialOpen(false)}
+          >
+            {isSpeedDialOpen && (
+              <div className="flex flex-col items-end gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsWhatsAppModalOpen(true)}>
+                  <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1B17] text-[#1A1A1A] dark:text-white text-xs font-bold shadow-lg border border-[#1A1A1A]/10 dark:border-white/10 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    WhatsApp Support
+                  </span>
 
-                <button
-                  type="button"
-                  aria-label="Open WhatsApp Support"
-                  className="w-12 h-12 rounded-full bg-gradient-to-b from-[#29eb71] to-[#20ba59] text-white flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(37,211,102,0.5),0_8px_10px_-6px_rgba(37,211,102,0.3)] hover:brightness-105 hover:scale-110 active:scale-95 border border-white/20 transition-all duration-300"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-6 h-6 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
-                    aria-hidden="true"
+                  <button
+                    type="button"
+                    aria-label="Open WhatsApp Support"
+                    className="w-12 h-12 rounded-full bg-gradient-to-b from-[#29eb71] to-[#20ba59] text-white flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(37,211,102,0.5),0_8px_10px_-6px_rgba(37,211,102,0.3)] hover:brightness-105 hover:scale-110 active:scale-95 border border-white/20 transition-all duration-300"
                   >
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                  </svg>
-                </button>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-6 h-6 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
+                      aria-hidden="true"
+                    >
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                    </svg>
+                  </button>
 
-              </div>
+                </div>
 
-              <div
-                className="flex items-center gap-2 group cursor-pointer"
-                onClick={() => {
-                  toggleChat();
-                  setIsSpeedDialOpen(false);
-                }}
-              >
-                <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1B17] text-[#1A1A1A] dark:text-white text-xs font-bold shadow-lg border border-[#1A1A1A]/10 dark:border-white/10 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  {t('bot.speedDialChat', 'Chat Support')}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Open AI Assistant"
-                  className="w-12 h-12 rounded-full bg-[#DF6400] text-white flex items-center justify-center shadow-xl hover:bg-[#C75700] hover:scale-110 active:scale-95 transition-all"
+                <div
+                  className="flex items-center gap-2 group cursor-pointer"
+                  onClick={() => {
+                    toggleChat();
+                    setIsSpeedDialOpen(false);
+                  }}
                 >
-                  <MessageSquare className="w-5 h-5 text-white" />
-                </button>
+                  <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1B17] text-[#1A1A1A] dark:text-white text-xs font-bold shadow-lg border border-[#1A1A1A]/10 dark:border-white/10 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {t('bot.speedDialChat', 'Chat Support')}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Open AI Assistant"
+                    className="w-12 h-12 rounded-full bg-[#DF6400] text-white flex items-center justify-center shadow-xl hover:bg-[#C75700] hover:scale-110 active:scale-95 transition-all"
+                  >
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
+            <button
+              type="button"
+              onClick={() => setIsSpeedDialOpen(!isSpeedDialOpen)}
+              aria-expanded={isSpeedDialOpen}
+              aria-label={isSpeedDialOpen ? "Close support menu" : "Open support menu"}
+              className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#DF6400] text-white shadow-[0_10px_25px_-5px_rgba(223,100,0,0.5),0_8px_10px_-6px_rgba(223,100,0,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(223,100,0,0.65)] hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DF6400] focus-visible:ring-offset-2 transition-all duration-300 ease-out group"
+            >
+              <Headphones
+                className={`w-6 h-6 text-white transition-all duration-300 ease-out ${isSpeedDialOpen
+                  ? "rotate-90 scale-95"
+                  : "animate-bounce group-hover:animate-none group-hover:rotate-[-8deg] group-hover:scale-110"
+                  }`}
+              />
+            </button>
+          </div>
+        ) : chatbotConfig.showAiAssistant ? (
           <button
             type="button"
-            onClick={() => setIsSpeedDialOpen(!isSpeedDialOpen)}
-            aria-expanded={isSpeedDialOpen}
-            aria-label={isSpeedDialOpen ? "Close support menu" : "Open support menu"}
-            className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#DF6400] text-white shadow-[0_10px_25px_-5px_rgba(223,100,0,0.5),0_8px_10px_-6px_rgba(223,100,0,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(223,100,0,0.65)] hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DF6400] focus-visible:ring-offset-2 transition-all duration-300 ease-out group"
+            onClick={toggleChat}
+            aria-label="Open AI Assistant"
+            className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#DF6400] text-white shadow-[0_10px_25px_-5px_rgba(223,100,0,0.5),0_8px_10px_-6px_rgba(223,100,0,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(223,100,0,0.65)] hover:scale-105 active:scale-95 transition-all duration-300 group"
           >
-            <Headphones
-              className={`w-6 h-6 text-white transition-all duration-300 ease-out ${isSpeedDialOpen
-                ? "rotate-90 scale-95"
-                : "animate-bounce group-hover:animate-none group-hover:rotate-[-8deg] group-hover:scale-110"
-                }`}
-            />
+            <MessageSquare className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
           </button>
-
-        </div>
+        ) : chatbotConfig.showWhatsApp ? (
+          <button
+            type="button"
+            onClick={() => setIsWhatsAppModalOpen(true)}
+            aria-label="Open WhatsApp Support"
+            className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-b from-[#29eb71] to-[#20ba59] text-white shadow-[0_10px_25px_-5px_rgba(37,211,102,0.5),0_8px_10px_-6px_rgba(37,211,102,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.65)] hover:scale-105 active:scale-95 transition-all duration-300 group border border-white/20"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-7 h-7 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform"
+              aria-hidden="true"
+            >
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+            </svg>
+          </button>
+        ) : null
       )}
 
-      {isWhatsAppModalOpen && (
+      {isWhatsAppModalOpen && chatbotConfig.showWhatsApp && (
         <div className="w-[340px] sm:w-[380px] bg-white dark:bg-[#111B21] rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] border border-[#128C7E]/10 dark:border-white/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-[#075E54] dark:bg-[#202C33] text-white p-4 flex items-center justify-between border-b border-black/10 shadow-sm">
             <div className="flex items-center gap-3">
@@ -598,7 +662,7 @@ export default function BlitzChatbot({
 
             <div className="relative w-48 h-48 mx-auto bg-white p-3 rounded-2xl shadow-md border border-black/5 flex items-center justify-center">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=M&margin=0&color=11-27-33&data=${encodeURIComponent(`whatsapp://send?phone=${WHATSAPP_RAW_NUMBER}&text=${encodeURIComponent('Hi BrokersBlitz, I am interested in Indian properties and would like assistance.')}`)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=M&margin=0&color=11-27-33&data=${encodeURIComponent(`whatsapp://send?phone=${rawWhatsAppNumber}&text=${encodeURIComponent('Hi BrokersBlitz, I am interested in Indian properties and would like assistance.')}`)}`}
                 alt="Scan WhatsApp QR code"
                 className="w-full h-full object-contain"
                 loading="lazy"
@@ -613,12 +677,12 @@ export default function BlitzChatbot({
             </div>
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-gray-600 dark:text-gray-300 font-mono text-xs font-semibold tracking-wide">
-              <span>{WHATSAPP_DISPLAY_NUMBER}</span>
+              <span>{displayWhatsAppNumber}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <a
-                href={`https://wa.me/${WHATSAPP_RAW_NUMBER}?text=${encodeURIComponent('Hi BrokersBlitz, I am interested in Indian properties and would like assistance.')}`}
+                href={`https://wa.me/${rawWhatsAppNumber}?text=${encodeURIComponent('Hi BrokersBlitz, I am interested in Indian properties and would like assistance.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 px-3 rounded-xl bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-bold text-xs hover:brightness-105 active:scale-95 flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(37,211,102,0.3)] transition-all"
@@ -646,22 +710,24 @@ export default function BlitzChatbot({
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setIsWhatsAppModalOpen(false);
-                if (!isOpen) toggleChat();
-              }}
-              className="w-full pt-1.5 text-center text-xs text-[#128C7E] dark:text-[#25D366] font-semibold hover:underline flex items-center justify-center gap-1 transition-colors"
-            >
-              <span>Need instant help? Consult our AI Property Advisor</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {chatbotConfig.showAiAssistant && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsWhatsAppModalOpen(false);
+                  if (!isOpen) toggleChat();
+                }}
+                className="w-full pt-1.5 text-center text-xs text-[#128C7E] dark:text-[#25D366] font-semibold hover:underline flex items-center justify-center gap-1 transition-colors"
+              >
+                <span>Need instant help? Consult our AI Property Advisor</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {isOpen && (
+      {isOpen && chatbotConfig.showAiAssistant && (
         <div className="w-[360px] sm:w-[420px] h-[580px] max-h-[85vh] bg-white dark:bg-[#1A1816] rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-[#DF6400]/15 dark:border-white/10 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-gradient-to-r from-[#FFF8F3] via-white to-[#FFF3E8] dark:from-[#241F1A] dark:via-[#1E1B18] dark:to-[#2A231C] px-4 py-3.5 flex items-center justify-between border-b border-[#DF6400]/15 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-3">
@@ -687,20 +753,22 @@ export default function BlitzChatbot({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  toggleChat();
-                  setIsWhatsAppModalOpen(true);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#128C7E] dark:text-[#25D366] text-[10px] font-bold flex items-center gap-1.5 transition-all active:scale-95"
-                title="Switch to WhatsApp"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#25D366]" aria-hidden="true">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                </svg>
-                <span className="hidden sm:inline">WhatsApp</span>
-              </button>
+              {chatbotConfig.showWhatsApp && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleChat();
+                    setIsWhatsAppModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#128C7E] dark:text-[#25D366] text-[10px] font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                  title="Switch to WhatsApp"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#25D366]" aria-hidden="true">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                  </svg>
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -733,7 +801,7 @@ export default function BlitzChatbot({
                         Recommended Actions:
                       </span>
                       <div className="grid grid-cols-2 gap-2">
-                        {m.options.map((opt) => (
+                        {m.options.filter((opt) => opt.key !== 'whatsapp' || chatbotConfig.showWhatsApp).map((opt) => (
                           <button
                             key={opt.key}
                             type="button"

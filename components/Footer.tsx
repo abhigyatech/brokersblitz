@@ -61,23 +61,23 @@ export default function Footer({ onSelectCity }: FooterProps) {
             </h5>
             <ul className="space-y-1.5 sm:space-y-2 text-xs text-[#5C5852] dark:text-[#A8A29A]">
               <li>
-                <Link href="/broker/apex-prime-realty" className="hover:text-[#DF6400] transition-colors block truncate">
-                  Apex Prime (Mumbai)
+                <Link href="/brokers?city=Mumbai" className="hover:text-[#DF6400] transition-colors block truncate">
+                  Mumbai Brokers
                 </Link>
               </li>
               <li>
-                <Link href="/broker/deccan-prestige" className="hover:text-[#DF6400] transition-colors block truncate">
-                  Deccan Prestige (BLR)
+                <Link href="/brokers?city=Bengaluru" className="hover:text-[#DF6400] transition-colors block truncate">
+                  Bengaluru Brokers
                 </Link>
               </li>
               <li>
-                <Link href="/broker/capital-corridors" className="hover:text-[#DF6400] transition-colors block truncate">
-                  Capital Corridors (NCR)
+                <Link href="/brokers?city=Delhi%20NCR" className="hover:text-[#DF6400] transition-colors block truncate">
+                  Delhi NCR Brokers
                 </Link>
               </li>
               <li>
-                <Link href="/broker/sahyadri-premier" className="hover:text-[#DF6400] transition-colors block truncate">
-                  Sahyadri (Pune)
+                <Link href="/brokers?city=Pune" className="hover:text-[#DF6400] transition-colors block truncate">
+                  Pune Brokers
                 </Link>
               </li>
               <li>

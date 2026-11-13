@@ -16,11 +16,11 @@ export async function POST(req: NextRequest) {
 
     const cookieStore = await cookies();
     const token = cookieStore.get('bb_session')?.value;
-    const sessionUser = token ? verifySession(token) : null;
+    const sessionUser = token ? await verifySession(token) : null;
 
     if (actionType === 'enquire' && propertyContext) {
       const propId = propertyContext.propertyId;
-      const dbProp = propId ? getPropertyById(propId) : null;
+      const dbProp = propId ? await getPropertyById(propId) : null;
 
       const title = dbProp?.title || propertyContext.propertyTitle || 'Property';
       const price = dbProp?.formattedPrice || propertyContext.propertyPrice || 'Price on request';
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       const brkId = propertyContext?.brokerId || 'brk-assigned';
       const brkStore = propertyContext?.brokerStoreCode || 'broker';
 
-      const lead = createLead({
+      const lead = await createLead({
         propertyId: propId,
         propertyTitle: propTitle,
         propertyPrice: propPrice,
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
     const sarvamKey = process.env.SARVAM_API_KEY;
 
     if (openaiKey && openaiKey.trim() !== '') {
-      const allProps = getAllProperties().slice(0, 10);
+      const allProps = (await getAllProperties()).slice(0, 10);
       const inventorySummary = allProps
         .map((p) => `${p.title} (${p.categoryLabel}, ${p.formattedPrice}) in ${p.locality}, ${p.city} [Broker: ${p.broker.name}, Code: ${p.broker.storeCode || p.broker.id}]`)
         .join('\n');
@@ -229,7 +229,7 @@ ${inventorySummary}
       if (q.includes('goa')) detectedCity = 'Goa';
       if (q.includes('chennai')) detectedCity = 'Chennai';
 
-      const matches = searchProperties({ city: detectedCity }).slice(0, 3);
+      const matches = (await searchProperties({ city: detectedCity })).slice(0, 3);
       if (matches.length > 0) {
         const listText = matches
           .map((p) => `• ${p.title} (${p.formattedPrice}) in ${p.locality} [RERA: ${p.reraId}]`)
@@ -248,7 +248,7 @@ ${inventorySummary}
     }
 
     if (q.includes('commercial') || q.includes('office') || q.includes('it park') || q.includes('retail') || q.includes('shop')) {
-      const commMatches = searchProperties({ category: 'commercial_office' }).slice(0, 3);
+      const commMatches = (await searchProperties({ category: 'commercial_office' })).slice(0, 3);
       const listText = commMatches.map((p) => `• ${p.title} (${p.formattedPrice}) in ${p.city}`).join('\n');
       return NextResponse.json({
         success: true,
@@ -263,7 +263,8 @@ ${inventorySummary}
     }
 
     if (q.includes('villa') || q.includes('penthouse') || q.includes('luxury')) {
-      const luxuryMatches = getAllProperties()
+      const allProps = await getAllProperties();
+      const luxuryMatches = allProps
         .filter((p) => p.category === 'villa' || p.category === 'penthouse')
         .slice(0, 3);
       const listText = luxuryMatches.map((p) => `• ${p.title} (${p.formattedPrice}) in ${p.city}`).join('\n');

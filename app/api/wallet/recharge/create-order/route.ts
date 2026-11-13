@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user || (user.role !== 'broker' && user.role !== 'admin')) {
       return NextResponse.json({ success: false, error: 'Only registered brokers can recharge wallet' }, { status: 403 });
     }
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       targetAmount = selectedPack.amountInInr;
     }
 
-    const wallet = getOrCreateWallet(user.id);
+    const wallet = await getOrCreateWallet(user.id);
     const receipt = `rcpt_${user.id.slice(-6)}_${Date.now().toString().slice(-6)}`;
 
     const order = await createRazorpayOrder({
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     });
 
     const nowIso = new Date().toISOString();
-    saveRechargeOrder({
+    await saveRechargeOrder({
       orderId: order.orderId,
       brokerId: user.id,
       packId: selectedPack.id,
@@ -99,4 +99,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create recharge order' }, { status: 500 });
   }
 }
-

@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionToken);
+    const user = await getSessionUser(sessionToken);
     if (!user || (user.role !== 'broker' && user.role !== 'admin')) {
       return NextResponse.json({ success: false, error: 'Unauthorized to update lead' }, { status: 403 });
     }
@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       return NextResponse.json({ success: false, error: 'Status is required' }, { status: 400 });
     }
 
-    const updated = updateLeadStatus(id, body.status);
+    const updated = await updateLeadStatus(id, body.status);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
     }
@@ -39,4 +39,3 @@ export async function PATCH(req: NextRequest, { params }: Props) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

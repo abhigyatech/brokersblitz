@@ -7,11 +7,22 @@ export function hashPassword(password: string): { hash: string; salt: string } {
 }
 
 export function verifyPassword(password: string, hash: string, salt: string): boolean {
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(verifyHash, 'hex'));
+  if (!password || !hash || !salt) {
+    return false;
+  }
+  try {
+    const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+    const a = Buffer.from(hash, 'hex');
+    const b = Buffer.from(verifyHash, 'hex');
+    if (a.length !== b.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 export function generateSessionToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
-

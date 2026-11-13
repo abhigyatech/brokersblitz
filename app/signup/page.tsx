@@ -83,11 +83,10 @@ function SignupForm() {
           Are you a:
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <label className={`p-2 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2 ${
-            selectedRole === 'buyer'
-              ? 'border-[#DF6400] bg-white dark:bg-[#24201C] font-bold text-[#1A1A1A] dark:text-white shadow-sm'
-              : 'border-transparent text-[#5C5852] dark:text-[#A8A29A] bg-white/60 dark:bg-[#1A1815]'
-          }`}>
+          <label className={`p-2 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2 ${selectedRole === 'buyer'
+            ? 'border-[#DF6400] bg-white dark:bg-[#24201C] font-bold text-[#1A1A1A] dark:text-white shadow-sm'
+            : 'border-transparent text-[#5C5852] dark:text-[#A8A29A] bg-white/60 dark:bg-[#1A1815]'
+            }`}>
             <input
               type="radio"
               name="role"
@@ -99,11 +98,10 @@ function SignupForm() {
             <span>1. Buyer / Tenant</span>
           </label>
 
-          <label className={`p-2 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2 ${
-            selectedRole === 'broker'
-              ? 'border-[#DF6400] bg-white dark:bg-[#24201C] font-bold text-[#1A1A1A] dark:text-white shadow-sm'
-              : 'border-transparent text-[#5C5852] dark:text-[#A8A29A] bg-white/60 dark:bg-[#1A1815]'
-          }`}>
+          <label className={`p-2 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2 ${selectedRole === 'broker'
+            ? 'border-[#DF6400] bg-white dark:bg-[#24201C] font-bold text-[#1A1A1A] dark:text-white shadow-sm'
+            : 'border-transparent text-[#5C5852] dark:text-[#A8A29A] bg-white/60 dark:bg-[#1A1815]'
+            }`}>
             <input
               type="radio"
               name="role"
@@ -191,11 +189,6 @@ function SignupForm() {
             Invited by a friend or broker? Enter their code above to unlock welcome credits.
           </p>
         )}
-      </div>
-
-      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] space-y-0.5">
-        <strong className="block font-bold">Important Notice:</strong>
-        <p>RERA numbers on this platform are self-reported by brokers. Buyers must independently verify all registration details on official state RERA portals.</p>
       </div>
 
       <label className="flex items-start gap-2 text-xs text-[#1A1A1A] dark:text-white cursor-pointer pt-0.5">

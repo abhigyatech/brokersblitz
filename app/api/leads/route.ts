@@ -5,13 +5,13 @@ import { getSessionUser } from '../../../lib/auth/user-store';
 export async function GET(req: NextRequest) {
   try {
     const sessionToken = req.cookies.get('bb_session')?.value;
-    const user = sessionToken ? getSessionUser(sessionToken) : null;
+    const user = sessionToken ? await getSessionUser(sessionToken) : null;
 
     const { searchParams } = new URL(req.url);
     const brokerQuery = searchParams.get('broker');
 
     if (brokerQuery) {
-      const leads = getLeadsByBroker(brokerQuery);
+      const leads = await getLeadsByBroker(brokerQuery);
       return NextResponse.json({ success: true, count: leads.length, leads });
     }
 
@@ -20,12 +20,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (user.role === 'admin') {
-      const leads = getAllLeads();
+      const leads = await getAllLeads();
       return NextResponse.json({ success: true, count: leads.length, leads });
     }
 
     const brokerStoreCode = user.agencyName ? user.agencyName.toLowerCase().replace(/[^a-z0-9]/g, '') : user.fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const brokerLeads = getLeadsByBroker(brokerStoreCode);
+    const brokerLeads = await getLeadsByBroker(brokerStoreCode);
     return NextResponse.json({ success: true, count: brokerLeads.length, leads: brokerLeads });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newLead = createLead({
+    const newLead = await createLead({
       propertyId: body.propertyId,
       propertyTitle: body.propertyTitle || 'Property Inquiry',
       propertyPrice: body.propertyPrice || '₹0',
@@ -71,4 +71,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

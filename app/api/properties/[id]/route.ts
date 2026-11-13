@@ -9,7 +9,7 @@ interface Props {
 export async function GET(req: NextRequest, { params }: Props) {
   try {
     const { id } = await params;
-    const property = getPropertyById(id);
+    const property = await getPropertyById(id);
     if (!property) {
       return NextResponse.json({ success: false, error: 'Property not found' }, { status: 404 });
     }
@@ -26,13 +26,13 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionToken);
+    const user = await getSessionUser(sessionToken);
     if (!user) {
       return NextResponse.json({ success: false, error: 'Session expired' }, { status: 401 });
     }
 
     const { id } = await params;
-    const property = getPropertyById(id);
+    const property = await getPropertyById(id);
     if (!property) {
       return NextResponse.json({ success: false, error: 'Property not found' }, { status: 404 });
     }
@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: Props) {
     }
 
     const updates = await req.json();
-    const updated = updateProperty(id, updates);
+    const updated = await updateProperty(id, updates);
 
     return NextResponse.json({
       success: true,
@@ -61,13 +61,13 @@ export async function DELETE(req: NextRequest, { params }: Props) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionToken);
+    const user = await getSessionUser(sessionToken);
     if (!user) {
       return NextResponse.json({ success: false, error: 'Session expired' }, { status: 401 });
     }
 
     const { id } = await params;
-    const property = getPropertyById(id);
+    const property = await getPropertyById(id);
     if (!property) {
       return NextResponse.json({ success: false, error: 'Property not found' }, { status: 404 });
     }
@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest, { params }: Props) {
       return NextResponse.json({ success: false, error: 'Unauthorized to delete this listing' }, { status: 403 });
     }
 
-    deleteProperty(id);
+    await deleteProperty(id);
 
     return NextResponse.json({
       success: true,
@@ -86,4 +86,3 @@ export async function DELETE(req: NextRequest, { params }: Props) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

@@ -1,18 +1,18 @@
 import { PropertyListing } from '../../data/types';
 import { getAllProperties, saveProperties } from '../db/properties-store';
-import { deductCredits, syncWalletBalances } from '../wallet/wallet-service';
+import { deductCredits } from '../wallet/wallet-service';
 
 export const FREE_LISTING_LIMIT = 5;
 export const FREE_LISTING_DAYS = 15;
 export const DAILY_LISTING_RATE = 2;
 
-export function evaluateBrokerListingQuota(brokerId: string): {
+export async function evaluateBrokerListingQuota(brokerId: string): Promise<{
   totalListings: number;
   activeListings: number;
   freeSlotsRemaining: number;
   isNextListingFree: boolean;
-} {
-  const properties = getAllProperties();
+}> {
+  const properties = await getAllProperties();
   const brokerProperties = properties.filter((p) => p.broker.id === brokerId);
   const total = brokerProperties.length;
   const active = brokerProperties.filter((p) => p.status === 'active').length;
@@ -31,7 +31,7 @@ export async function processListingOnCreation(
   property: PropertyListing,
   brokerId: string
 ): Promise<PropertyListing> {
-  const quota = evaluateBrokerListingQuota(brokerId);
+  const quota = await evaluateBrokerListingQuota(brokerId);
 
   if (quota.isNextListingFree) {
     const freeUntil = new Date(Date.now() + FREE_LISTING_DAYS * 86400000).toISOString();
@@ -60,11 +60,11 @@ export async function processListingOnCreation(
     }
   }
 
-  const all = getAllProperties();
+  const all = await getAllProperties();
   const idx = all.findIndex((p) => p.id === property.id);
   if (idx >= 0) {
     all[idx] = property;
-    saveProperties(all);
+    await saveProperties(all);
   }
 
   return property;
@@ -76,7 +76,7 @@ export async function syncDailyListingDeductions(): Promise<{
   expiredCount: number;
   creditsDeducted: number;
 }> {
-  const properties = getAllProperties();
+  const properties = await getAllProperties();
   let chargedCount = 0;
   let expiredCount = 0;
   let creditsDeducted = 0;
@@ -133,7 +133,7 @@ export async function syncDailyListingDeductions(): Promise<{
   }
 
   if (hasModifications) {
-    saveProperties(properties);
+    await saveProperties(properties);
   }
 
   return {
@@ -144,12 +144,12 @@ export async function syncDailyListingDeductions(): Promise<{
   };
 }
 
-export function markListingAsSold(propertyId: string, brokerId: string): {
+export async function markListingAsSold(propertyId: string, brokerId: string): Promise<{
   success: boolean;
   property?: PropertyListing;
   error?: string;
-} {
-  const properties = getAllProperties();
+}> {
+  const properties = await getAllProperties();
   const idx = properties.findIndex((p) => p.id === propertyId);
 
   if (idx === -1) {
@@ -163,7 +163,7 @@ export function markListingAsSold(propertyId: string, brokerId: string): {
 
   prop.status = 'sold';
   prop.soldAt = new Date().toISOString();
-  saveProperties(properties);
+  await saveProperties(properties);
 
   return { success: true, property: prop };
 }
@@ -173,7 +173,7 @@ export async function reactivateListing(propertyId: string, brokerId: string): P
   property?: PropertyListing;
   error?: string;
 }> {
-  const properties = getAllProperties();
+  const properties = await getAllProperties();
   const idx = properties.findIndex((p) => p.id === propertyId);
 
   if (idx === -1) {
@@ -199,7 +199,7 @@ export async function reactivateListing(propertyId: string, brokerId: string): P
     prop.lastChargedAt = new Date().toISOString();
     delete prop.expiredAt;
     delete prop.expiredReason;
-    saveProperties(properties);
+    await saveProperties(properties);
 
     return { success: true, property: prop };
   } catch (err: any) {
@@ -285,4 +285,3 @@ export function interleaveAndPrioritizeListings(listings: PropertyListing[]): Pr
 
   return [...interleavedActive, ...sold];
 }
-

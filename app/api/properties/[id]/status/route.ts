@@ -13,13 +13,13 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionToken);
+    const user = await getSessionUser(sessionToken);
     if (!user) {
       return NextResponse.json({ success: false, error: 'Session expired' }, { status: 401 });
     }
 
     const { id } = await context.params;
-    const prop = getPropertyById(id);
+    const prop = await getPropertyById(id);
 
     if (!prop) {
       return NextResponse.json({ success: false, error: 'Property not found' }, { status: 404 });
@@ -33,7 +33,7 @@ export async function POST(
     const { action } = body;
 
     if (action === 'sold') {
-      const result = markListingAsSold(prop.id, prop.broker.id);
+      const result = await markListingAsSold(prop.id, prop.broker.id);
       if (!result.success) {
         return NextResponse.json({ success: false, error: result.error }, { status: 400 });
       }
@@ -57,7 +57,7 @@ export async function POST(
     }
 
     if (action === 'pause') {
-      const updated = updateProperty(prop.id, { status: 'paused' });
+      const updated = await updateProperty(prop.id, { status: 'paused' });
       return NextResponse.json({
         success: true,
         message: 'Listing paused. Daily charges stopped.',
@@ -68,7 +68,7 @@ export async function POST(
     if (action === 'resume') {
       const isStillFree = prop.isFreeListing && prop.freeUntil && new Date(prop.freeUntil).getTime() > Date.now();
       if (isStillFree) {
-        const updated = updateProperty(prop.id, { status: 'active', lastChargedAt: new Date().toISOString() });
+        const updated = await updateProperty(prop.id, { status: 'active', lastChargedAt: new Date().toISOString() });
         return NextResponse.json({
           success: true,
           message: 'Listing resumed as active (Promotional free period).',
@@ -92,4 +92,3 @@ export async function POST(
     return NextResponse.json({ success: false, error: error.message || 'Operation failed' }, { status: 500 });
   }
 }
-

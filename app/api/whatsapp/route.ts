@@ -32,9 +32,9 @@ import { getPropertiesByBroker } from '@/lib/db/properties-store';
 import { getOrCreateWallet } from '@/lib/wallet/wallet-service';
 import { findUserById, findUserByPhone } from '@/lib/auth/user-store';
 
-function getBrokerInfo(session: any, from: string) {
+async function getBrokerInfo(session: any, from: string) {
   const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
-  const user = (session.brokerId ? findUserById(session.brokerId) : null) || findUserByPhone(cleanPhone);
+  const user = (session.brokerId ? await findUserById(session.brokerId) : null) || (await findUserByPhone(cleanPhone));
   if (user && user.role === 'broker') {
     return {
       name: user.fullName,
@@ -114,14 +114,12 @@ export async function POST(req: NextRequest) {
     const actionId = interactiveButtonId || interactiveListId;
     const cleanPhone = from.replace(/[^0-9]/g, '').slice(-10);
 
-    console.log(`[WhatsApp Inbound] From: ${from} (${userName}) | Type: ${messageType} | Text: "${textBody}" | ActionId: "${actionId}"`);
-
-    const session = getOrCreateSession(from, userName);
+    const session = await getOrCreateSession(from, userName);
 
     if (session.role !== 'broker') {
-      const existingUser = findUserByPhone(cleanPhone);
+      const existingUser = await findUserByPhone(cleanPhone);
       if (existingUser && existingUser.role === 'broker') {
-        updateSession(from, {
+        await updateSession(from, {
           role: 'broker',
           brokerId: existingUser.id,
           brokerCode: existingUser.storeCode || `wa-${cleanPhone}`,
@@ -161,17 +159,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, reason: 'transcription_failed' }, { status: 200 });
       }
 
-      const brokerUser = (session.brokerId ? findUserById(session.brokerId) : null) || findUserByPhone(cleanPhone);
+      const brokerUser = (session.brokerId ? await findUserById(session.brokerId) : null) || (await findUserByPhone(cleanPhone));
       const brokerCity = brokerUser?.operatingCity || (session.agencyName?.includes('Mumbai') ? 'Mumbai' : 'Indore');
 
       const extractedDraft = await extractPropertyFromVoiceTranscript(transcript, brokerCity);
 
-      updateSession(from, {
+      await updateSession(from, {
         currentStep: 'voice_draft_confirm',
         draftListing: extractedDraft,
       });
 
-      const brokerInfo = getBrokerInfo(session, from);
+      const brokerInfo = await getBrokerInfo(session, from);
       const summaryCard = formatDraftSummaryCard(extractedDraft, brokerInfo);
 
       if (session.role === 'broker' || brokerUser) {
@@ -206,7 +204,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (actionId === 'edit_field_price') {
-      setSessionStep(from, 'edit_draft_price');
+      await setSessionStep(from, 'edit_draft_price');
       await sendTextMessage(
         from,
         `💰 *EDIT ASKING PRICE*\nPlease reply with the revised asking price in Lakhs or Crores:\n(e.g., "50 Lakhs" or "1.2 Crore" or "25,000 rent")`
@@ -215,7 +213,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (actionId === 'edit_field_bhk') {
-      setSessionStep(from, 'edit_draft_bhk');
+      await setSessionStep(from, 'edit_draft_bhk');
       await sendButtonMessage(
         from,
         `🛋️ *EDIT CONFIGURATION*\nSelect the correct BHK configuration for this property:`,
@@ -229,7 +227,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (actionId === 'edit_field_locality') {
-      setSessionStep(from, 'edit_draft_locality');
+      await setSessionStep(from, 'edit_draft_locality');
       await sendTextMessage(
         from,
         `📍 *EDIT LOCALITY*\nPlease reply with the exact locality, colony, or landmark (e.g., "Scheme 78" or "Vijay Nagar"):`
@@ -252,12 +250,12 @@ export async function POST(req: NextRequest) {
 
       const correction = applyCorrectionToDraft(session.draftListing, input);
       if (correction.updated) {
-        updateSession(from, {
+        await updateSession(from, {
           currentStep: 'voice_draft_confirm',
           draftListing: correction.draft,
         });
 
-        const brokerInfo = getBrokerInfo(session, from);
+        const brokerInfo = await getBrokerInfo(session, from);
         const updatedCard = formatDraftSummaryCard(correction.draft, brokerInfo);
 
         await sendButtonMessage(
@@ -290,7 +288,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (actionId === 'voice_pub_no' || actionId === 'list_pub_no') {
-      resetDraftListing(from);
+      await resetDraftListing(from);
       await sendTextMessage(from, '❌ Listing draft discarded. Send another voice note or type "LIST" whenever you are ready.');
       return NextResponse.json({ success: true, action: 'voice_discarded' }, { status: 200 });
     }
@@ -313,7 +311,7 @@ export async function POST(req: NextRequest) {
 
     if (actionId === 'broker_action_leads') {
       const brokerCode = session.brokerCode || session.agencyName || '';
-      const leads = getLeadsByBroker(brokerCode);
+      const leads = await getLeadsByBroker(brokerCode);
 
       if (leads.length === 0) {
         await sendTextMessage(
@@ -371,7 +369,7 @@ export async function POST(req: NextRequest) {
       /(inventory|my properties|my listings|all listings)/i.test(textBody.trim())
     ) {
       const brokerCode = session.brokerCode || session.agencyName || session.brokerName || '';
-      const props = getPropertiesByBroker(brokerCode);
+      const props = await getPropertiesByBroker(brokerCode);
 
       if (props.length === 0) {
         await sendButtonMessage(
@@ -402,7 +400,7 @@ export async function POST(req: NextRequest) {
       /(wallet|credits|credit|balance|passbook)/i.test(textBody.trim())
     ) {
       const brokerId = session.brokerId || `broker-wa-${cleanPhone}`;
-      const wallet = getOrCreateWallet(brokerId);
+      const wallet = await getOrCreateWallet(brokerId);
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brokersblitz.in';
 
       const walletMsg = `💳 *YOUR WALLET & CREDIT BALANCE*\n------------------------------\n• *Total Available Balance:* ${wallet.totalBalance} Credits\n• *Paid Credits:* ${wallet.paidBalance} (Never expires)\n• *Bonus Credits:* ${wallet.freeBalance} (Platform grants)\n------------------------------\n• *Listing Policy:* First 5 listings are free for 15 days. Afterwards, active listings cost 2 credits/day.\n• *Passbook & Recharge:* ${baseUrl}/dashboard?tab=wallet`;
@@ -424,12 +422,12 @@ export async function POST(req: NextRequest) {
       const brokerCity = session.agencyName?.includes('Mumbai') ? 'Mumbai' : 'Indore';
       const extracted = await extractPropertyFromVoiceTranscript(textBody, brokerCity);
 
-      updateSession(from, {
+      await updateSession(from, {
         currentStep: 'voice_draft_confirm',
         draftListing: extracted,
       });
 
-      const brokerInfo = getBrokerInfo(session, from);
+      const brokerInfo = await getBrokerInfo(session, from);
       const summaryCard = formatDraftSummaryCard(extracted, brokerInfo);
 
       await sendButtonMessage(from, summaryCard, [

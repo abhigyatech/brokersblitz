@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     let validReferrerId: string | undefined;
     if (referralCode && typeof referralCode === 'string' && referralCode.trim().length > 0) {
-      const val = validateReferralCode(referralCode.trim());
+      const val = await validateReferralCode(referralCode.trim());
       if (!val.valid) {
         return NextResponse.json(
           { error: val.error || 'Invalid referral code entered.' },
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       validReferrerId = val.referrer?.id;
     }
 
-    const result = createNewUser({
+    const result = await createNewUser({
       fullName,
       email,
       phone,
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       referralResult = await processReferralReward(result.user.id, referralCode.trim());
     }
 
-    const sessionToken = createSession(result.user.id);
+    const sessionToken = await createSession(result.user.id);
 
     const safeUser = {
       id: result.user.id,
@@ -109,11 +109,10 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
+  } catch (err: any) {
     return NextResponse.json(
-      { error: 'Internal server error while processing registration.' },
+      { error: err?.message || 'Internal server error while registering account.' },
       { status: 500 }
     );
   }
 }
-

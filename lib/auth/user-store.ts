@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-import { hashPassword, generateSessionToken } from './crypto';
-import { readJsonFile, writeJsonFile } from '../db/json-store';
+import { hashPassword } from './crypto';
+import { query } from '../db/postgres';
 
 export type UserRole = 'buyer' | 'broker' | 'admin';
 
@@ -37,81 +35,29 @@ export interface ActiveSession {
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'brokersblitz_secret_session_key_2026';
 
-const DEFAULT_PASS_HASH = 'd63596aa9cd2542a8d0bc37c5318b4e785ac7bfc45496d736ac297de8f344dc8cd40c09a7cd1c901cc543d091f0f14844c346352943257a60986f21a334a2fc6';
-const DEFAULT_PASS_SALT = '355fb0cdf63948838fd8d826e2f964f1';
-
-function getDefaultSeedUsers(): StoredUser[] {
-  return [
-    {
-      id: 'user-admin-01',
-      fullName: 'Platform Operations Admin',
-      email: 'admin@brokersblitz.in',
-      phone: '7272357771',
-      role: 'admin',
-      passwordHash: DEFAULT_PASS_HASH,
-      passwordSalt: DEFAULT_PASS_SALT,
-      agencyName: 'BrokersBlitz Headquarters',
-      referralCode: 'PLATF7771',
-      dpdpConsent: true,
-      dpdpConsentDate: '2026-11-01T11:35:52.213Z',
-      createdAt: '2026-11-01T11:35:52.217Z',
-      updatedAt: '2026-11-04T11:15:00.000Z',
-    },
-    {
-      id: 'broker-indore-01',
-      fullName: 'Sanjay Verma',
-      email: 'sanjay@primeadvisory.in',
-      phone: '9988776655',
-      role: 'broker',
-      passwordHash: DEFAULT_PASS_HASH,
-      passwordSalt: DEFAULT_PASS_SALT,
-      agencyName: 'Prime Advisory Indore',
-      storeCode: 'indore1001',
-      referralCode: 'INDORE1001',
-      reraNumber: 'MP/RERA/IND/2021/0458',
-      operatingCity: 'Indore',
-      experienceYears: 9,
-      isLocked: false,
-      dpdpConsent: true,
-      dpdpConsentDate: '2026-11-01T10:00:00.000Z',
-      createdAt: '2026-11-01T10:00:00.000Z',
-      updatedAt: '2026-11-04T11:15:00.000Z',
-    },
-    {
-      id: 'broker-mumbai-01',
-      fullName: 'Rajesh Mehta',
-      email: 'rajesh@apexprime.in',
-      phone: '9820144520',
-      role: 'broker',
-      passwordHash: DEFAULT_PASS_HASH,
-      passwordSalt: DEFAULT_PASS_SALT,
-      agencyName: 'Apex Prime Realty MMR',
-      storeCode: 'apex-prime',
-      referralCode: 'APEXPRIME',
-      reraNumber: 'A51900010482',
-      operatingCity: 'Mumbai',
-      experienceYears: 16,
-      isLocked: false,
-      dpdpConsent: true,
-      dpdpConsentDate: '2026-11-01T10:00:00.000Z',
-      createdAt: '2026-11-01T10:00:00.000Z',
-      updatedAt: '2026-11-02T10:00:00.000Z',
-    },
-    {
-      id: 'user-buyer-demo',
-      fullName: 'Rahul Sharma',
-      email: 'buyer@investors.in',
-      phone: '9876543210',
-      role: 'buyer',
-      passwordHash: DEFAULT_PASS_HASH,
-      passwordSalt: DEFAULT_PASS_SALT,
-      referralCode: 'RAHUL3210',
-      dpdpConsent: true,
-      dpdpConsentDate: '2026-11-01T11:35:52.217Z',
-      createdAt: '2026-11-01T11:35:52.217Z',
-      updatedAt: '2026-11-01T11:35:52.217Z',
-    },
-  ];
+function mapProfileToUser(row: any): StoredUser {
+  return {
+    id: String(row.id),
+    fullName: row.full_name || '',
+    email: row.email || '',
+    phone: row.phone || '',
+    role: (row.role || 'buyer') as UserRole,
+    passwordHash: row.password_hash || '',
+    passwordSalt: row.password_salt || '',
+    agencyName: row.agency_name || undefined,
+    storeCode: row.store_code || undefined,
+    referralCode: row.referral_code || undefined,
+    referredBy: row.referred_by || undefined,
+    reraNumber: row.rera_number || undefined,
+    operatingCity: row.city_of_operation || undefined,
+    experienceYears: row.experience_years ? Number(row.experience_years) : undefined,
+    avatar: row.avatar_url || undefined,
+    isLocked: Boolean(row.is_locked),
+    dpdpConsent: Boolean(row.dpdp_consent),
+    dpdpConsentDate: row.dpdp_consent_date ? new Date(row.dpdp_consent_date).toISOString() : new Date().toISOString(),
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+  };
 }
 
 export function generateUserReferralCode(user: { fullName: string; storeCode?: string; phone?: string; id?: string }): string {
@@ -124,46 +70,50 @@ export function generateUserReferralCode(user: { fullName: string; storeCode?: s
   return `${namePart}${phonePart.padEnd(4, '0')}`;
 }
 
-export function getAllUsers(): StoredUser[] {
+export async function getAllUsers(): Promise<StoredUser[]> {
   try {
-    const users = readJsonFile<StoredUser[]>('users.json', getDefaultSeedUsers());
-    let modified = false;
-    for (const u of users) {
-      if (!u.referralCode) {
-        u.referralCode = generateUserReferralCode(u);
-        modified = true;
-      }
-    }
-    if (modified) {
-      saveUsers(users);
-    }
-    return users;
+    const res = await query('SELECT * FROM public.profiles ORDER BY created_at DESC');
+    return res.rows.map(mapProfileToUser);
   } catch {
-    return getDefaultSeedUsers();
+    return [];
   }
 }
 
-export function saveUsers(users: StoredUser[]) {
-  writeJsonFile('users.json', users);
+export async function findUserByEmail(email: string): Promise<StoredUser | null> {
+  if (!email) return null;
+  try {
+    const res = await query('SELECT * FROM public.profiles WHERE lower(email) = lower($1) LIMIT 1', [email.trim()]);
+    if (res.rows.length === 0) return null;
+    return mapProfileToUser(res.rows[0]);
+  } catch {
+    return null;
+  }
 }
 
-export function findUserByEmail(email: string): StoredUser | undefined {
-  const users = getAllUsers();
-  return users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-}
-
-export function findUserByPhone(phone: string): StoredUser | undefined {
+export async function findUserByPhone(phone: string): Promise<StoredUser | null> {
+  if (!phone) return null;
   const cleaned = phone.replace(/[^0-9]/g, '').slice(-10);
-  const users = getAllUsers();
-  return users.find((u) => u.phone.replace(/[^0-9]/g, '').slice(-10) === cleaned);
+  try {
+    const res = await query('SELECT * FROM public.profiles WHERE right(regexp_replace(phone, \'[^0-9]\', \'\', \'g\'), 10) = $1 LIMIT 1', [cleaned]);
+    if (res.rows.length === 0) return null;
+    return mapProfileToUser(res.rows[0]);
+  } catch {
+    return null;
+  }
 }
 
-export function findUserById(id: string): StoredUser | undefined {
-  const users = getAllUsers();
-  return users.find((u) => u.id === id);
+export async function findUserById(id: string): Promise<StoredUser | null> {
+  if (!id) return null;
+  try {
+    const res = await query('SELECT * FROM public.profiles WHERE id::text = $1 LIMIT 1', [id.trim()]);
+    if (res.rows.length === 0) return null;
+    return mapProfileToUser(res.rows[0]);
+  } catch {
+    return null;
+  }
 }
 
-export function createNewUser(params: {
+export async function createNewUser(params: {
   fullName: string;
   email: string;
   phone: string;
@@ -177,7 +127,7 @@ export function createNewUser(params: {
   operatingCity?: string;
   experienceYears?: number;
   dpdpConsent: boolean;
-}): { success: boolean; error?: string; user?: StoredUser } {
+}): Promise<{ success: boolean; error?: string; user?: StoredUser }> {
   const normalizedEmail = params.email.trim().toLowerCase();
   const normalizedPhone = params.phone.replace(/[^0-9]/g, '').slice(-10);
 
@@ -192,49 +142,64 @@ export function createNewUser(params: {
     };
   }
 
-  if (findUserByEmail(normalizedEmail)) {
+  const existingEmail = await findUserByEmail(normalizedEmail);
+  if (existingEmail) {
     return { success: false, error: 'This email address is already registered. Please log in instead.' };
   }
 
-  if (findUserByPhone(normalizedPhone)) {
+  const existingPhone = await findUserByPhone(normalizedPhone);
+  if (existingPhone) {
     return { success: false, error: 'This mobile number is already registered. Please log in instead.' };
   }
 
   const { hash, salt } = hashPassword(params.password);
-  const referralCode = params.referralCode?.trim() || generateUserReferralCode({
-    fullName: params.fullName,
-    storeCode: params.storeCode,
-    phone: normalizedPhone,
-  });
+  const referralCode =
+    params.referralCode?.trim() ||
+    generateUserReferralCode({
+      fullName: params.fullName,
+      storeCode: params.storeCode,
+      phone: normalizedPhone,
+    });
 
-  const newUser: StoredUser = {
-    id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-    fullName: params.fullName.trim(),
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    role: params.role,
-    passwordHash: hash,
-    passwordSalt: salt,
-    agencyName: params.agencyName?.trim(),
-    storeCode: params.storeCode?.trim(),
-    referralCode,
-    referredBy: params.referredBy?.trim(),
-    reraNumber: params.reraNumber?.trim(),
-    operatingCity: params.operatingCity?.trim(),
-    dpdpConsent: true,
-    dpdpConsentDate: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  try {
+    const res = await query(
+      `INSERT INTO public.profiles (
+        email, phone, full_name, role, password_hash, password_salt,
+        agency_name, store_code, referral_code, referred_by,
+        rera_number, city_of_operation, experience_years,
+        dpdp_consent, dpdp_consent_date, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10,
+        $11, $12, $13,
+        $14, now(), now(), now()
+      ) RETURNING *`,
+      [
+        normalizedEmail,
+        normalizedPhone,
+        params.fullName.trim(),
+        params.role,
+        hash,
+        salt,
+        params.agencyName?.trim() || null,
+        params.storeCode?.trim() || null,
+        referralCode,
+        params.referredBy?.trim() || null,
+        params.reraNumber?.trim() || null,
+        params.operatingCity?.trim() || null,
+        params.experienceYears || 1,
+        params.dpdpConsent,
+      ]
+    );
 
-  const users = getAllUsers();
-  users.push(newUser);
-  saveUsers(users);
-
-  return { success: true, user: newUser };
+    const created = mapProfileToUser(res.rows[0]);
+    return { success: true, user: created };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Database error creating user.' };
+  }
 }
 
-export function createAdminUser(
+export async function createAdminUser(
   adminEmail: string,
   params: {
     fullName: string;
@@ -242,8 +207,8 @@ export function createAdminUser(
     phone: string;
     password: string;
   }
-): { success: boolean; error?: string; user?: StoredUser } {
-  const requestingAdmin = findUserByEmail(adminEmail);
+): Promise<{ success: boolean; error?: string; user?: StoredUser }> {
+  const requestingAdmin = await findUserByEmail(adminEmail);
   if (!requestingAdmin || requestingAdmin.role !== 'admin') {
     return { success: false, error: 'Unauthorized. Only existing administrators can create admin accounts.' };
   }
@@ -258,53 +223,54 @@ export function createAdminUser(
 
   const normalizedPhone = params.phone.replace(/[^0-9]/g, '').slice(-10);
 
-  if (findUserByEmail(normalizedEmail)) {
+  const existingEmail = await findUserByEmail(normalizedEmail);
+  if (existingEmail) {
     return { success: false, error: 'This admin email is already registered.' };
   }
 
-  if (findUserByPhone(normalizedPhone)) {
+  const existingPhone = await findUserByPhone(normalizedPhone);
+  if (existingPhone) {
     return { success: false, error: 'This mobile number is already in use.' };
   }
 
   const { hash, salt } = hashPassword(params.password);
-  const newAdmin: StoredUser = {
-    id: `admin-${Date.now()}`,
-    fullName: params.fullName.trim(),
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    role: 'admin',
-    passwordHash: hash,
-    passwordSalt: salt,
-    agencyName: 'BrokersBlitz Headquarters',
-    dpdpConsent: true,
-    dpdpConsentDate: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 
-  const users = getAllUsers();
-  users.push(newAdmin);
-  saveUsers(users);
+  try {
+    const res = await query(
+      `INSERT INTO public.profiles (
+        email, phone, full_name, role, password_hash, password_salt,
+        agency_name, dpdp_consent, dpdp_consent_date, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, 'admin', $4, $5,
+        'BrokersBlitz Headquarters', true, now(), now(), now()
+      ) RETURNING *`,
+      [normalizedEmail, normalizedPhone, params.fullName.trim(), hash, salt]
+    );
 
-  return { success: true, user: newAdmin };
+    return { success: true, user: mapProfileToUser(res.rows[0]) };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to create administrator profile.' };
+  }
 }
 
-export function createSession(userId: string): string {
+export async function createSession(userId: string): Promise<string> {
   const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const signature = crypto.createHmac('sha256', SESSION_SECRET).update(`${userId}:${expiresAt}`).digest('hex');
   const token = `bbs.${userId}.${expiresAt}.${signature}`;
 
   try {
-    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
-    const validSessions = sessions.filter((s) => s.expiresAt > Date.now());
-    validSessions.push({ token, userId, expiresAt });
-    writeJsonFile('sessions.json', validSessions);
+    await query(
+      `INSERT INTO public.active_sessions (token, user_id, expires_at, created_at)
+       VALUES ($1, $2::uuid, $3, now())
+       ON CONFLICT (token) DO NOTHING`,
+      [token, userId, expiresAt]
+    );
   } catch {}
 
   return token;
 }
 
-export function verifySession(token: string): StoredUser | null {
+export async function verifySession(token: string): Promise<StoredUser | null> {
   if (!token) return null;
 
   if (token.startsWith('bbs.')) {
@@ -315,7 +281,7 @@ export function verifySession(token: string): StoredUser | null {
       if (!isNaN(expiresAt) && expiresAt > Date.now()) {
         const expected = crypto.createHmac('sha256', SESSION_SECRET).update(`${userId}:${expiresAt}`).digest('hex');
         if (expected === signature) {
-          const user = findUserById(userId);
+          const user = await findUserById(userId);
           if (user && !user.isLocked) {
             return user;
           }
@@ -326,11 +292,12 @@ export function verifySession(token: string): StoredUser | null {
   }
 
   try {
-    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
-    const session = sessions.find((s) => s.token === token && s.expiresAt > Date.now());
-    if (!session) return null;
-    const user = findUserById(session.userId);
-    return user || null;
+    const res = await query(
+      `SELECT s.user_id FROM public.active_sessions s WHERE s.token = $1 AND s.expires_at > $2 LIMIT 1`,
+      [token, Date.now()]
+    );
+    if (res.rows.length === 0) return null;
+    return await findUserById(res.rows[0].user_id);
   } catch {
     return null;
   }
@@ -338,25 +305,20 @@ export function verifySession(token: string): StoredUser | null {
 
 export const getSessionUser = verifySession;
 
-export function deleteSession(token: string) {
+export async function deleteSession(token: string): Promise<void> {
   try {
-    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
-    const filtered = sessions.filter((s) => s.token !== token);
-    writeJsonFile('sessions.json', filtered);
+    await query(`DELETE FROM public.active_sessions WHERE token = $1`, [token]);
   } catch {}
 }
 
-export function deleteAllUserSessions(userId: string) {
+export async function deleteAllUserSessions(userId: string): Promise<void> {
   try {
-    const sessions = readJsonFile<ActiveSession[]>('sessions.json', []);
-    const filtered = sessions.filter((s) => s.userId !== userId);
-    writeJsonFile('sessions.json', filtered);
+    await query(`DELETE FROM public.active_sessions WHERE user_id::text = $1`, [userId]);
   } catch {}
 }
 
-export function eraseUserPersonalData(userId: string): { success: boolean; error?: string } {
-  const users = getAllUsers();
-  const user = users.find((u) => u.id === userId);
+export async function eraseUserPersonalData(userId: string): Promise<{ success: boolean; error?: string }> {
+  const user = await findUserById(userId);
   if (!user) {
     return { success: false, error: 'User not found' };
   }
@@ -364,58 +326,98 @@ export function eraseUserPersonalData(userId: string): { success: boolean; error
     return { success: false, error: 'Primary administrator accounts cannot be erased directly.' };
   }
 
-  user.fullName = 'Deleted User [DPDP Erased]';
-  user.email = `erased.${userId}@anonymized.brokersblitz.in`;
-  user.phone = '0000000000';
-  user.passwordHash = 'ERASED';
-  user.passwordSalt = 'ERASED';
-  user.agencyName = undefined;
-  user.reraNumber = undefined;
-  user.isLocked = true;
-  user.dpdpConsent = false;
-  user.updatedAt = new Date().toISOString();
+  try {
+    await query(
+      `UPDATE public.profiles SET
+        full_name = 'Deleted User [DPDP Erased]',
+        email = $1,
+        phone = '0000000000',
+        password_hash = 'ERASED',
+        password_salt = 'ERASED',
+        agency_name = NULL,
+        rera_number = NULL,
+        is_locked = true,
+        dpdp_consent = false,
+        updated_at = now()
+      WHERE id::text = $2`,
+      [`erased.${userId}@anonymized.brokersblitz.in`, userId]
+    );
 
-  saveUsers(users);
-  deleteAllUserSessions(userId);
-
-  return { success: true };
+    await deleteAllUserSessions(userId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to erase user profile data.' };
+  }
 }
 
-export function getAllBrokers(): StoredUser[] {
-  return getAllUsers().filter((u) => u.role === 'broker');
+export async function getAllBrokers(): Promise<StoredUser[]> {
+  try {
+    const res = await query(
+      `SELECT * FROM public.profiles WHERE role = 'broker' AND (is_locked IS FALSE OR is_locked IS NULL) ORDER BY created_at DESC`
+    );
+    return res.rows.map(mapProfileToUser);
+  } catch {
+    return [];
+  }
 }
 
-export function getAllBuyers(): StoredUser[] {
-  return getAllUsers().filter((u) => u.role === 'buyer');
+export async function getAllBuyers(): Promise<StoredUser[]> {
+  try {
+    const res = await query(
+      `SELECT * FROM public.profiles WHERE role = 'buyer' ORDER BY created_at DESC`
+    );
+    return res.rows.map(mapProfileToUser);
+  } catch {
+    return [];
+  }
 }
 
-export function toggleUserLock(userId: string): { success: boolean; error?: string; user?: StoredUser } {
-  const users = getAllUsers();
-  const user = users.find((u) => u.id === userId);
+export async function toggleUserLock(userId: string): Promise<{ success: boolean; error?: string; user?: StoredUser }> {
+  const user = await findUserById(userId);
   if (!user) {
     return { success: false, error: 'User not found' };
   }
   if (user.role === 'admin') {
     return { success: false, error: 'Administrator accounts cannot be locked.' };
   }
-  user.isLocked = !user.isLocked;
-  user.updatedAt = new Date().toISOString();
-  saveUsers(users);
-  return { success: true, user };
+
+  try {
+    const res = await query(
+      `UPDATE public.profiles SET is_locked = NOT coalesce(is_locked, false), updated_at = now() WHERE id::text = $1 RETURNING *`,
+      [userId]
+    );
+    return { success: true, user: mapProfileToUser(res.rows[0]) };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to toggle account status.' };
+  }
 }
 
-export function getPlatformUsersStats() {
-  const users = getAllUsers();
-  const brokers = users.filter((u) => u.role === 'broker');
-  const buyers = users.filter((u) => u.role === 'buyer');
-  const lockedBrokers = brokers.filter((b) => b.isLocked);
-  const lockedBuyers = buyers.filter((b) => b.isLocked);
-  return {
-    totalBrokers: brokers.length,
-    totalBuyers: buyers.length,
-    activeBrokers: brokers.length - lockedBrokers.length,
-    lockedBrokers: lockedBrokers.length,
-    activeBuyers: buyers.length - lockedBuyers.length,
-    lockedBuyers: lockedBuyers.length,
-  };
+export async function getPlatformUsersStats() {
+  try {
+    const brokersRes = await query(`SELECT count(*) as total, count(*) FILTER (WHERE is_locked IS TRUE) as locked FROM public.profiles WHERE role = 'broker'`);
+    const buyersRes = await query(`SELECT count(*) as total, count(*) FILTER (WHERE is_locked IS TRUE) as locked FROM public.profiles WHERE role = 'buyer'`);
+
+    const totalBrokers = parseInt(brokersRes.rows[0]?.total || '0', 10);
+    const lockedBrokers = parseInt(brokersRes.rows[0]?.locked || '0', 10);
+    const totalBuyers = parseInt(buyersRes.rows[0]?.total || '0', 10);
+    const lockedBuyers = parseInt(buyersRes.rows[0]?.locked || '0', 10);
+
+    return {
+      totalBrokers,
+      totalBuyers,
+      activeBrokers: totalBrokers - lockedBrokers,
+      lockedBrokers,
+      activeBuyers: totalBuyers - lockedBuyers,
+      lockedBuyers,
+    };
+  } catch {
+    return {
+      totalBrokers: 0,
+      totalBuyers: 0,
+      activeBrokers: 0,
+      lockedBrokers: 0,
+      activeBuyers: 0,
+      lockedBuyers: 0,
+    };
+  }
 }

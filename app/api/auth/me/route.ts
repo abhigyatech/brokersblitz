@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const user = verifySession(token);
+    const user = await verifySession(token);
     if (!user) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
@@ -35,4 +35,3 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { status: 500 });
   }
 }
-

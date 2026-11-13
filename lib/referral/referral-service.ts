@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-import { readJsonFile as readJsonFileStore, writeJsonFile as writeJsonFileStore } from '../db/json-store';
-import { getAllUsers, saveUsers, findUserById, StoredUser } from '../auth/user-store';
+import { query } from '../db/postgres';
+import { findUserById, StoredUser } from '../auth/user-store';
 import { grantFreeCredits } from '../wallet/wallet-service';
 
 export interface ReferralConfig {
@@ -31,10 +29,6 @@ export interface ReferralRecord {
   createdAt: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const CONFIG_FILE = path.join(DATA_DIR, 'referral_config.json');
-const REFERRALS_FILE = path.join(DATA_DIR, 'referrals.json');
-
 const DEFAULT_CONFIG: ReferralConfig = {
   referrerRewardCredits: 50,
   refereeRewardCredits: 50,
@@ -44,24 +38,27 @@ const DEFAULT_CONFIG: ReferralConfig = {
   updatedBy: 'admin@brokersblitz.in',
 };
 
-function ensureReferralFiles() {}
-
-function safeReadJson<T>(filePath: string, fallback: T): T {
-  const baseName = path.basename(filePath);
-  return readJsonFileStore<T>(baseName, fallback);
+export async function getReferralConfig(): Promise<ReferralConfig> {
+  try {
+    const res = await query(
+      `SELECT value FROM public.platform_settings WHERE key = 'referral_config' LIMIT 1`
+    );
+    if (res.rows.length === 0) return DEFAULT_CONFIG;
+    const cfg = res.rows[0].value;
+    return {
+      referrerRewardCredits: Number(cfg.referrerRewardCredits) || DEFAULT_CONFIG.referrerRewardCredits,
+      refereeRewardCredits: Number(cfg.refereeRewardCredits) || DEFAULT_CONFIG.refereeRewardCredits,
+      expiryDays: Number(cfg.expiryDays) || DEFAULT_CONFIG.expiryDays,
+      isEnabled: typeof cfg.isEnabled === 'boolean' ? cfg.isEnabled : DEFAULT_CONFIG.isEnabled,
+      updatedAt: cfg.updatedAt || DEFAULT_CONFIG.updatedAt,
+      updatedBy: cfg.updatedBy || DEFAULT_CONFIG.updatedBy,
+    };
+  } catch {
+    return DEFAULT_CONFIG;
+  }
 }
 
-function safeWriteJson<T>(filePath: string, data: T): void {
-  const baseName = path.basename(filePath);
-  writeJsonFileStore(baseName, data);
-}
-
-export function getReferralConfig(): ReferralConfig {
-  ensureReferralFiles();
-  return safeReadJson<ReferralConfig>(CONFIG_FILE, DEFAULT_CONFIG);
-}
-
-export function updateReferralConfig(
+export async function updateReferralConfig(
   params: {
     referrerRewardCredits?: number;
     refereeRewardCredits?: number;
@@ -69,10 +66,8 @@ export function updateReferralConfig(
     isEnabled?: boolean;
   },
   adminEmail: string
-): ReferralConfig {
-  ensureReferralFiles();
-  const current = getReferralConfig();
-
+): Promise<ReferralConfig> {
+  const current = await getReferralConfig();
   const updated: ReferralConfig = {
     referrerRewardCredits:
       typeof params.referrerRewardCredits === 'number' && params.referrerRewardCredits >= 0
@@ -91,55 +86,78 @@ export function updateReferralConfig(
     updatedBy: adminEmail || current.updatedBy,
   };
 
-  safeWriteJson(CONFIG_FILE, updated);
-  return updated;
-}
+  try {
+    await query(
+      `INSERT INTO public.platform_settings (key, value, updated_at)
+       VALUES ('referral_config', $1::jsonb, now())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+      [JSON.stringify(updated)]
+    );
+  } catch {}
 
-export function getAllReferrals(): ReferralRecord[] {
-  ensureReferralFiles();
-  return safeReadJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  return updated;
 }
 
 export function normalizeReferralCode(code: string): string {
   return code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 }
 
-export function findReferrerByCode(rawCode: string): StoredUser | null {
+export async function findReferrerByCode(rawCode: string): Promise<StoredUser | null> {
   if (!rawCode) return null;
   const target = normalizeReferralCode(rawCode);
-  const users = getAllUsers();
 
-  for (const u of users) {
-    if (u.isLocked) continue;
+  try {
+    const res = await query(
+      `SELECT * FROM public.profiles
+       WHERE (is_locked IS FALSE OR is_locked IS NULL)
+         AND (
+           upper(coalesce(referral_code, '')) = $1
+           OR upper(coalesce(store_code, '')) = $1
+           OR upper(regexp_replace(coalesce(store_code, ''), '[^a-zA-Z0-9]', '', 'g')) = $1
+         )
+       LIMIT 1`,
+      [target]
+    );
 
-    if (u.referralCode && normalizeReferralCode(u.referralCode) === target) {
-      return u;
-    }
-
-    if (u.storeCode && normalizeReferralCode(u.storeCode) === target) {
-      return u;
-    }
-
-    const strippedStore = u.storeCode ? u.storeCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
-    const strippedTarget = target.replace(/[^A-Z0-9]/g, '');
-    if (strippedStore && strippedStore === strippedTarget) {
-      return u;
-    }
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    return {
+      id: String(row.id),
+      fullName: row.full_name,
+      email: row.email,
+      phone: row.phone,
+      role: row.role,
+      passwordHash: row.password_hash || '',
+      passwordSalt: row.password_salt || '',
+      agencyName: row.agency_name,
+      storeCode: row.store_code,
+      referralCode: row.referral_code,
+      referredBy: row.referred_by,
+      reraNumber: row.rera_number,
+      operatingCity: row.city_of_operation,
+      experienceYears: Number(row.experience_years) || 1,
+      avatar: row.avatar_url,
+      isLocked: Boolean(row.is_locked),
+      dpdpConsent: Boolean(row.dpdp_consent),
+      dpdpConsentDate: row.dpdp_consent_date ? new Date(row.dpdp_consent_date).toISOString() : new Date().toISOString(),
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+    };
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
-export function validateReferralCode(
+export async function validateReferralCode(
   rawCode: string,
   currentUserId?: string
-): { valid: boolean; error?: string; referrer?: StoredUser } {
+): Promise<{ valid: boolean; error?: string; referrer?: StoredUser }> {
   const code = normalizeReferralCode(rawCode);
   if (!code) {
     return { valid: false, error: 'Referral code cannot be empty.' };
   }
 
-  const referrer = findReferrerByCode(code);
+  const referrer = await findReferrerByCode(code);
   if (!referrer) {
     return { valid: false, error: 'Invalid referral code. No active partner found with this code.' };
   }
@@ -155,6 +173,39 @@ export function validateReferralCode(
   return { valid: true, referrer };
 }
 
+export async function getAllReferrals(): Promise<ReferralRecord[]> {
+  try {
+    const res = await query(
+      `SELECT r.*,
+              pref.full_name as ref_name, pref.email as ref_email, pref.phone as ref_phone, pref.role as ref_role,
+              pror.full_name as ror_name
+       FROM public.referrals r
+       LEFT JOIN public.profiles pref ON r.referee_id = pref.id::text
+       LEFT JOIN public.profiles pror ON r.referrer_id = pror.id::text
+       ORDER BY r.created_at DESC`
+    );
+
+    return res.rows.map((row) => ({
+      id: row.id,
+      referrerId: row.referrer_id,
+      referrerName: row.ror_name || 'Partner',
+      referrerCode: row.code,
+      refereeId: row.referee_id,
+      refereeName: row.ref_name || 'Invited User',
+      refereeEmail: row.ref_email || '',
+      refereePhone: row.ref_phone || '',
+      refereeRole: row.ref_role || 'buyer',
+      referrerCredits: Number(row.reward_credits) || 50,
+      refereeCredits: Number(row.reward_credits) || 50,
+      expiryDays: 30,
+      status: (row.status || 'COMPLETED') as 'COMPLETED' | 'PENDING' | 'REJECTED',
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function processReferralReward(
   refereeId: string,
   rawReferralCode: string
@@ -166,30 +217,28 @@ export async function processReferralReward(
   refereeCredits?: number;
   expiryDays?: number;
 }> {
-  ensureReferralFiles();
-  const config = getReferralConfig();
-
+  const config = await getReferralConfig();
   if (!config.isEnabled) {
     return { success: false, error: 'Referral program is currently paused.' };
   }
 
-  const referee = findUserById(refereeId);
+  const referee = await findUserById(refereeId);
   if (!referee) {
     return { success: false, error: 'Referred user not found.' };
   }
 
-  const validation = validateReferralCode(rawReferralCode, refereeId);
+  const validation = await validateReferralCode(rawReferralCode, refereeId);
   if (!validation.valid || !validation.referrer) {
     return { success: false, error: validation.error || 'Invalid referral code.' };
   }
 
   const referrer = validation.referrer;
-  const referrals = getAllReferrals();
 
-  const alreadyProcessed = referrals.some(
-    (r) => r.refereeId === refereeId && r.status === 'COMPLETED'
+  const existingRes = await query(
+    `SELECT id FROM public.referrals WHERE referee_id = $1 AND status = 'COMPLETED' LIMIT 1`,
+    [refereeId]
   );
-  if (alreadyProcessed) {
+  if (existingRes.rows.length > 0) {
     return { success: false, error: 'Referral bonus already awarded for this account.' };
   }
 
@@ -219,11 +268,27 @@ export async function processReferralReward(
     );
   }
 
+  const recId = `ref-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const codeToSave = referrer.referralCode || referrer.storeCode || rawReferralCode.toUpperCase();
+
+  await query(
+    `INSERT INTO public.referrals (
+      id, code, referrer_id, referee_id, status, reward_credits,
+      reward_granted_at, expires_at, created_at
+    ) VALUES (
+      $1, $2, $3, $4, 'COMPLETED', $5,
+      now(), now() + interval '${expiryDays} days', now()
+    )`,
+    [recId, codeToSave, referrer.id, referee.id, referrerCredits]
+  );
+
+  await query(`UPDATE public.profiles SET referred_by = $1 WHERE id::text = $2`, [referrer.id, refereeId]);
+
   const record: ReferralRecord = {
-    id: `ref-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+    id: recId,
     referrerId: referrer.id,
     referrerName: referrer.fullName,
-    referrerCode: referrer.referralCode || referrer.storeCode || rawReferralCode.toUpperCase(),
+    referrerCode: codeToSave,
     refereeId: referee.id,
     refereeName: referee.fullName,
     refereeEmail: referee.email,
@@ -236,16 +301,6 @@ export async function processReferralReward(
     createdAt: new Date().toISOString(),
   };
 
-  referrals.unshift(record);
-  safeWriteJson(REFERRALS_FILE, referrals);
-
-  const users = getAllUsers();
-  const uIdx = users.findIndex((u) => u.id === refereeId);
-  if (uIdx >= 0) {
-    users[uIdx].referredBy = referrer.id;
-    saveUsers(users);
-  }
-
   return {
     success: true,
     record,
@@ -255,70 +310,71 @@ export async function processReferralReward(
   };
 }
 
-export function getUserReferralInfo(userId: string): {
+export async function getUserReferralInfo(userId: string): Promise<{
   referralCode: string;
-  referralLink: string;
+  shareUrl: string;
   totalReferrals: number;
   totalCreditsEarned: number;
-  config: ReferralConfig;
-  referrals: ReferralRecord[];
-} {
-  ensureReferralFiles();
-  const config = getReferralConfig();
-  const users = getAllUsers();
-  const user = users.find((u) => u.id === userId);
+  pendingCredits: number;
+  history: ReferralRecord[];
+}> {
+  const user = await findUserById(userId);
+  const code = user?.referralCode || user?.storeCode || (user ? user.fullName.replace(/[^A-Za-z]/g, '').slice(0, 5).toUpperCase() + 'REF' : 'REF');
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brokersblitz.in';
+  const shareUrl = `${baseUrl}/signup?ref=${code}`;
 
-  let referralCode = user?.referralCode || '';
-  if (!referralCode && user) {
-    if (user.storeCode) {
-      referralCode = user.storeCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    } else {
-      const namePart = user.fullName.replace(/[^a-zA-Z]/g, '').slice(0, 5).toUpperCase() || 'REF';
-      const phonePart = user.phone ? user.phone.slice(-4) : user.id.slice(-4).toUpperCase();
-      referralCode = `${namePart}${phonePart}`;
-    }
+  try {
+    const all = await getAllReferrals();
+    const myReferrals = all.filter((r) => r.referrerId === userId);
+    const totalCreditsEarned = myReferrals
+      .filter((r) => r.status === 'COMPLETED')
+      .reduce((sum, r) => sum + r.referrerCredits, 0);
+
+    return {
+      referralCode: code,
+      shareUrl,
+      totalReferrals: myReferrals.length,
+      totalCreditsEarned,
+      pendingCredits: 0,
+      history: myReferrals,
+    };
+  } catch {
+    return {
+      referralCode: code,
+      shareUrl,
+      totalReferrals: 0,
+      totalCreditsEarned: 0,
+      pendingCredits: 0,
+      history: [],
+    };
   }
-
-  const allReferrals = getAllReferrals();
-  const userReferrals = allReferrals.filter(
-    (r) => r.referrerId === userId && r.status === 'COMPLETED'
-  );
-
-  const totalCreditsEarned = userReferrals.reduce((sum, r) => sum + (r.referrerCredits || 0), 0);
-  const referralLink = `https://brokersblitz.in/signup?ref=${encodeURIComponent(referralCode)}`;
-
-  return {
-    referralCode,
-    referralLink,
-    totalReferrals: userReferrals.length,
-    totalCreditsEarned,
-    config,
-    referrals: userReferrals,
-  };
 }
 
-export function getAdminReferralOverview(): {
+export async function getAdminReferralOverview(): Promise<{
   config: ReferralConfig;
-  totalReferralsCount: number;
-  totalCreditsDistributed: number;
   referrals: ReferralRecord[];
-} {
-  ensureReferralFiles();
-  const config = getReferralConfig();
-  const referrals = getAllReferrals();
-
-  let totalCreditsDistributed = 0;
-  for (const r of referrals) {
-    if (r.status === 'COMPLETED') {
-      totalCreditsDistributed += (r.referrerCredits || 0) + (r.refereeCredits || 0);
-    }
-  }
+  stats: {
+    totalReferrals: number;
+    completedReferrals: number;
+    totalCreditsDistributed: number;
+  };
+}> {
+  const [config, referrals] = await Promise.all([
+    getReferralConfig(),
+    getAllReferrals(),
+  ]);
+  const totalCompleted = referrals.filter((r) => r.status === 'COMPLETED').length;
+  const totalCreditsDistributed = referrals
+    .filter((r) => r.status === 'COMPLETED')
+    .reduce((sum, r) => sum + r.referrerCredits + r.refereeCredits, 0);
 
   return {
     config,
-    totalReferralsCount: referrals.length,
-    totalCreditsDistributed,
     referrals,
+    stats: {
+      totalReferrals: referrals.length,
+      completedReferrals: totalCompleted,
+      totalCreditsDistributed,
+    },
   };
 }
-

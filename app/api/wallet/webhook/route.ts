@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       const amountInPaise = payment?.amount || 0;
       const amountInInr = Math.floor(amountInPaise / 100);
 
-      const storedOrder = orderId ? getRechargeOrder(orderId) : undefined;
+      const storedOrder = orderId ? await getRechargeOrder(orderId) : undefined;
       const brokerId = storedOrder?.brokerId || notes.brokerId;
 
       if (brokerId && paymentId && orderId && amountInInr > 0) {
@@ -52,4 +52,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: 'error' }, { status: 500 });
   }
 }
-

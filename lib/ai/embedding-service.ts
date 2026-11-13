@@ -11,10 +11,12 @@ export interface EmbeddingRecord {
   embedding?: number[];
 }
 
-export function generatePlatformCorpus(): EmbeddingRecord[] {
+export async function generatePlatformCorpus(): Promise<EmbeddingRecord[]> {
   const records: EmbeddingRecord[] = [];
-  const properties = getAllProperties();
-  const brokers = getAllBrokers();
+  const [properties, brokers] = await Promise.all([
+    getAllProperties(),
+    getAllBrokers(),
+  ]);
 
   for (const p of properties) {
     const textCorpus = [
